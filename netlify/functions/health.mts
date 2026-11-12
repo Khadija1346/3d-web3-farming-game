@@ -1,0 +1,30 @@
+import type { Context } from '@netlify/functions'
+
+/**
+ * Runtime health endpoint.
+ * Reports configuration only; it does not claim that a database is reachable.
+ */
+export default async (_request: Request, _context: Context) => {
+  const databaseConfigured = Boolean(process.env.DATABASE_URL)
+
+  return Response.json(
+    {
+      service: 'garriverse-api',
+      status: 'ok',
+      version: '0.1.0',
+      capabilities: {
+        database: databaseConfigured ? 'configured_not_connection_tested' : 'not_configured',
+        playerPersistence: 'disabled',
+        realTokenRewards: 'disabled',
+      },
+      timestamp: new Date().toISOString(),
+    },
+    {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    },
+  )
+}
