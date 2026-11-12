@@ -95,8 +95,9 @@ using (true);
 
 -- No direct client policies for game state or action events.
 -- Netlify server functions will use a server-only credential after auth/session verification.
+-- The view exposes only public leaderboard fields. Keep base-table access private.
 create or replace view public.player_leaderboard
-with (security_invoker = true)
+with (security_invoker = false)
 as
 select
   user_id,
