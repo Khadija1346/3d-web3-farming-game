@@ -3,7 +3,7 @@
  * Reports configuration only; it does not claim that a database is reachable.
  */
 export default async (_request: Request) => {
-  const databaseConfigured = Boolean(process.env.DATABASE_URL)
+  const supabaseConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   return Response.json(
     {
@@ -11,7 +11,7 @@ export default async (_request: Request) => {
       status: 'ok',
       version: '0.1.0',
       capabilities: {
-        database: databaseConfigured ? 'configured_not_connection_tested' : 'not_configured',
+        database: supabaseConfigured ? 'credentials_configured_not_connection_tested' : 'not_configured',
         playerPersistence: 'disabled',
         realTokenRewards: 'disabled',
       },
