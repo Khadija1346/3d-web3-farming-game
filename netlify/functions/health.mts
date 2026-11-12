@@ -1,10 +1,8 @@
-import type { Context } from '@netlify/functions'
-
 /**
  * Runtime health endpoint.
  * Reports configuration only; it does not claim that a database is reachable.
  */
-export default async (_request: Request, _context: Context) => {
+export default async (_request: Request) => {
   const databaseConfigured = Boolean(process.env.DATABASE_URL)
 
   return Response.json(
