@@ -55,12 +55,12 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'player_state_missing';
   end if;
-  if p_expected_revision is not null and p_expected_revision <> v_revision then
+  -- Recheck after the row lock: concurrent retries with the same key may have waited here.\n  select result into v_existing\n  from public.game_action_events\n  where user_id = p_user_id and idempotency_key = p_idempotency_key;\n  if found then\n    return v_existing || jsonb_build_object('duplicate', true);\n  end if;\n\n  if p_expected_revision is not null and p_expected_revision <> v_revision then
     raise exception using errcode = '40001', message = 'revision_conflict';
   end if;
 
   -- Initialize an empty state without accepting any client-provided snapshot.
-  if jsonb_typeof(v_state->'plots') <> 'array' or jsonb_array_length(v_state->'plots') <> 12 then
+  if coalesce(jsonb_typeof(v_state->'plots') <> 'array', true) or coalesce(jsonb_array_length(v_state->'plots') <> 12, true) then
     select jsonb_agg(jsonb_build_object(
       'id', n, 'stage', 'wild', 'growth', 0, 'water', 0, 'weeds', 0
     ) order by n) into v_plots
