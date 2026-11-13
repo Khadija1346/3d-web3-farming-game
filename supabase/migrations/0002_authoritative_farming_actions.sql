@@ -39,13 +39,13 @@ declare
   v_weeds numeric;
   v_total_xp bigint;
 begin
-  if p_user_id is null or p_action_type is null or p_action_type not in ('till','plant','water','weed','harvest') then
+  if p_user_id is null or p_action_type is null or p_action_type not in ('till','plant','water','weed','harvest','refill_can') then
     raise exception using errcode = '22023', message = 'invalid_action';
   end if;
   if p_idempotency_key is null or length(p_idempotency_key) < 8 or length(p_idempotency_key) > 128 then
     raise exception using errcode = '22023', message = 'invalid_idempotency_key';
   end if;
-  if p_plot_id is null or p_plot_id < 0 or p_plot_id > 11 then
+  if p_action_type <> 'refill_can' and (p_plot_id is null or p_plot_id < 0 or p_plot_id > 11) then
     raise exception using errcode = '22023', message = 'invalid_plot';
   end if;
 
@@ -116,9 +116,13 @@ begin
   end loop;
   v_state := jsonb_set(v_state,'{plots}',v_plots,true);
   v_state := jsonb_set(v_state,'{lastSimulatedAt}',to_jsonb(now()),true);
-  v_plot := v_plots->p_plot_id;
-  if v_plot is null then
-    raise exception using errcode = '22023', message = 'invalid_plot';
+  if p_action_type = 'refill_can' then
+    v_plot := null;
+  else
+    v_plot := v_plots->p_plot_id;
+    if v_plot is null then
+      raise exception using errcode = '22023', message = 'invalid_plot';
+    end if;
   end if;
 
   case p_action_type
@@ -164,9 +168,17 @@ begin
       v_plot := jsonb_set(v_plot,'{water}','0'::jsonb);
       v_plot := jsonb_set(v_plot,'{weeds}','0'::jsonb);
       v_gain := 20;
+    when 'refill_can' then
+      if coalesce((v_state->>'waterCan')::integer,0) >= 5 then
+        raise exception using errcode='22023', message='watering_can_full';
+      end if;
+      v_state := jsonb_set(v_state,'{waterCan}','5'::jsonb,true);
+      v_gain := 0;
   end case;
 
-  v_plots := jsonb_set(v_plots, array[p_plot_id::text], v_plot, false);
+  if p_action_type <> 'refill_can' then
+    v_plots := jsonb_set(v_plots, array[p_plot_id::text], v_plot, false);
+  end if;
   v_state := jsonb_set(v_state,'{plots}',v_plots,true);
   v_xp := coalesce((v_state->>'xp')::bigint,0) + v_gain;
   v_total_xp := coalesce((v_state->>'totalXp')::bigint,0) + v_gain;
