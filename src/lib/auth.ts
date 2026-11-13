@@ -79,6 +79,6 @@ export async function submitFarmingAction(action: 'till' | 'plant' | 'water' | '
   return request<{ state: Record<string, unknown>; revision: number; xp_gain: number; level: number; duplicate: boolean }>('farming-action', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + session.access_token },
-    body: JSON.stringify({ action, plotId, idempotencyKey, expectedRevision }),
+    body: JSON.stringify({ action, ...(action === 'refill_can' ? {} : { plotId }), idempotencyKey, expectedRevision }),
   })
 }
