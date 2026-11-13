@@ -82,3 +82,21 @@ export async function submitFarmingAction(action: 'till' | 'plant' | 'water' | '
     body: JSON.stringify({ action, ...(action === 'refill_can' ? {} : { plotId }), idempotencyKey, expectedRevision }),
   })
 }
+
+export type EconomyAction =
+  | 'factory_start'
+  | 'factory_run_stage'
+  | 'factory_complete_stage'
+  | 'warehouse_deposit'
+  | 'market_sell'
+  | 'market_buy_stems'
+
+export async function submitEconomyAction(action: EconomyAction, expectedRevision: number, idempotencyKey: string = crypto.randomUUID()) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ state: Record<string, unknown>; revision: number; xp_gain: number; level: number; duplicate: boolean }>('economy-action', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ action, idempotencyKey, expectedRevision }),
+  })
+}
