@@ -35,7 +35,7 @@ After setting variables, trigger a new deploy so Netlify Functions receive them.
 
 ## 4. Verify the deployed backend
 
-Open `/.netlify/functions/health` on the deployed site. A `ready` status means the API can reach Supabase Auth, the game-state table, leaderboard view and the three authoritative gameplay RPCs. A degraded/not-configured result must be resolved before announcing cloud gameplay as live.
+Open `/.netlify/functions/health` on the deployed site. A `ready` status means the API can reach Supabase Auth, the game-state table, leaderboard view, gameplay RPCs and quest ledger. A degraded/not-configured result must be resolved before announcing cloud gameplay as live.
 
 Then create a test account and verify:
 - Register, sign in, sign out and sign in again.
