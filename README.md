@@ -33,4 +33,4 @@ Read [docs/supabase-setup.md](./docs/supabase-setup.md) and [docs/backend-api-co
 Load `/embed` full-screen in an approved WebView or iframe. The game emits `garri:ready` and `garri:level` events through `window.parent.postMessage` and an optional `window.GarriHost.onEvent` hook. See [src/embed/bridge.ts](./src/embed/bridge.ts).
 
 ## Roadmap and launch blockers
-See [PLAN.md](./PLAN.md). Google/X OAuth, wallet sign-in, live token data, social verification, quests, NFTs, moderator tools and real-token payouts still require implementation and/or official team configuration.
+See [PLAN.md](./PLAN.md). Google/X OAuth, wallet sign-in, live token data, social verification, NFTs, moderator tools and real-token payouts still require implementation and/or official team configuration.
