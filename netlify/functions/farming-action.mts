@@ -1,6 +1,6 @@
 import { adminPost, json, methodNotAllowed, readBearer, verifyUser } from './_lib/supabase.mts'
 
-const allowed = new Set(['till', 'plant', 'water', 'weed', 'harvest'])
+const allowed = new Set(['till', 'plant', 'water', 'weed', 'harvest', 'refill_can'])
 
 export default async (request: Request) => {
   if (request.method !== 'POST') return methodNotAllowed('POST')
@@ -16,13 +16,13 @@ export default async (request: Request) => {
       expectedRevision?: number
     }
     if (!body.action || !allowed.has(body.action)) return json({ error: 'invalid_action' }, 400)
-    if (!Number.isInteger(body.plotId) || (body.plotId as number) < 0 || (body.plotId as number) > 11) return json({ error: 'invalid_plot' }, 400)
+    if (body.action === 'refill_can' ? body.plotId !== undefined : (!Number.isInteger(body.plotId) || (body.plotId as number) < 0 || (body.plotId as number) > 11)) return json({ error: 'invalid_plot' }, 400)
     if (typeof body.idempotencyKey !== 'string' || body.idempotencyKey.length < 8 || body.idempotencyKey.length > 128) return json({ error: 'invalid_idempotency_key' }, 400)
     if (body.expectedRevision !== undefined && (!Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0)) return json({ error: 'invalid_revision' }, 400)
     const r = await adminPost('rpc/apply_garriverse_action', {
       p_user_id: auth.user.id,
       p_action_type: body.action,
-      p_plot_id: body.plotId,
+      p_plot_id: body.action === 'refill_can' ? null : body.plotId,
       p_idempotency_key: body.idempotencyKey,
       p_expected_revision: body.expectedRevision ?? null,
     })
