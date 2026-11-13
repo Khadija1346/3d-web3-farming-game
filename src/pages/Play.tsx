@@ -33,8 +33,18 @@ export default function Play({ embed = false }: { embed?: boolean }) {
     }
     let active = true
     const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => {
-      const result = await submitFarmingAction(action, plotId, revision, idempotencyKey)
-      return { state: result.state, revision: result.revision }
+      try {
+        const result = await submitFarmingAction(action, plotId, revision, idempotencyKey)
+        return { state: result.state, revision: result.revision }
+      } catch (error) {
+        if (error instanceof Error && error.message === 'revision_conflict') {
+          const latest = await fetchGameState()
+          if (latest.state?.state && Array.isArray(latest.state.state.plots)) store.hydrateCloudState(latest.state.state, latest.state.revision)
+          store.setCloudReady(true, latest.state?.revision ?? 0)
+          throw new Error('Game state refreshed after another device update. Please retry the action.')
+        }
+        throw error
+      }
     }
     store.setCloudCommandHandler(handler, false)
     setCloudStatus('Connecting your farmer account…')
