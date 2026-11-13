@@ -37,6 +37,7 @@ Apply migrations in numeric order:
 2. `supabase/migrations/0002_authoritative_farming_actions.sql`
 3. `supabase/migrations/0003_authoritative_factory_warehouse_market.sql`
 4. `supabase/migrations/0004_authoritative_tanker_actions.sql`
+5. `supabase/migrations/0005_server_quests_and_claims.sql`
 
 Migration 0001 creates player profiles, game state, idempotent action events, the auth-user trigger and public leaderboard view. Browser clients receive no direct write policies for game state or action events.
 
