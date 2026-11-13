@@ -18,6 +18,7 @@ Open **SQL Editor** and run the complete contents of these files in numeric orde
 3. `supabase/migrations/0003_authoritative_factory_warehouse_market.sql`
 4. `supabase/migrations/0004_authoritative_tanker_actions.sql`
 5. `supabase/migrations/0005_server_quests_and_claims.sql`
+5. `supabase/migrations/0005_server_quests_and_claims.sql`
 
 Confirm that `player_profiles`, `player_game_states`, `game_action_events` and `player_leaderboard` exist. The RPC functions must be executable by `service_role` only. Browser clients must not receive direct write policies for player state or action events.
 
