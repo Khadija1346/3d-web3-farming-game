@@ -53,6 +53,8 @@ Migration 0003 owns:
 
 Migration 0004 owns `water_tanker` and `refill_tanker`; it applies server-time crop growth before watering and persists tanker inventory and revision.
 
+Migration 0005 derives daily planting/watering, weekly packaged-bag and all-time till quests from immutable server action events. Claims are transactionally validated, period-bound, idempotent and award only in-game XP/stems.
+
 The farming, economy and utility action endpoints accept only an action, idempotency key and expected revision (the endpoints additionally accept a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is granted to `service_role` only.
 
 The 3D client now loads the signed-in player's cloud state and routes field, factory, warehouse, market and tanker actions to the server. Factory stage progress shown in the UI is a display estimate; the server checks elapsed time before accepting stage completion. Unsigned-in gameplay remains a local preview. Weather/day presentation remains client-side; rain does not water cloud crops. Quests, wallet features, NFT features and real token rewards are not cloud-backed.
