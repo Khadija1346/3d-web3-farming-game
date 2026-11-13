@@ -98,6 +98,14 @@ begin
   if coalesce((v_result#>>'{state,factory,running}')::boolean,false) is not true then
     raise exception 'factory stage did not start';
   end if;
+  begin
+    perform public.apply_garriverse_economy_action(
+      '11111111-1111-4111-8111-111111111111','factory_complete_stage','ci-factory-early-01',5
+    );
+    raise exception 'factory stage must not complete early';
+  exception when sqlstate '22023' then
+    if SQLERRM<>'factory_stage_not_ready' then raise; end if;
+  end;
   perform pg_sleep(3.2);
   v_result:=public.apply_garriverse_economy_action(
     '11111111-1111-4111-8111-111111111111','factory_complete_stage','ci-factory-done-01',5
