@@ -195,4 +195,68 @@ begin
 end
 $$;
 
+do $
+declare
+  v_result jsonb;
+  v_quests jsonb;
+  v_revision bigint := 11;
+  v_period text;
+  v_state jsonb;
+  i integer;
+begin
+  -- Four new plant actions should unlock the daily planting quest.
+  for i in 1..4 loop
+    v_result:=public.apply_garriverse_action(
+      '11111111-1111-4111-8111-111111111111','till',i,
+      'ci-quest-till-'||i::text||'-001',v_revision
+    );
+    v_revision:=(v_result->>'revision')::bigint;
+    v_result:=public.apply_garriverse_action(
+      '11111111-1111-4111-8111-111111111111','plant',i,
+      'ci-quest-plant-'||i::text||'-01',v_revision
+    );
+    v_revision:=(v_result->>'revision')::bigint;
+  end loop;
+  if v_revision<>19 then raise exception 'quest action revision mismatch: %',v_revision; end if;
+
+  v_quests:=public.get_garriverse_quests('11111111-1111-4111-8111-111111111111');
+  if (v_quests#>>'{quests,0,progress}')::integer<>4 then raise exception 'daily plant quest progress mismatch'; end if;
+  v_period:=v_quests#>>'{quests,0,periodKey}';
+
+  v_result:=public.claim_garriverse_quest(
+    '11111111-1111-4111-8111-111111111111','d-plant',v_period,'ci-quest-claim-001',v_revision
+  );
+  if (v_result->>'revision')::bigint<>20 then raise exception 'quest claim revision mismatch'; end if;
+  if (v_result#>>'{reward,xp}')::integer<>60 or (v_result#>>'{reward,stems}')::integer<>2 then
+    raise exception 'daily plant quest reward mismatch';
+  end if;
+  v_state:=v_result->'state';
+  if (v_state->>'stems')::integer<>13 then raise exception 'quest stem reward not added'; end if;
+  if (v_state->>'level')::integer<>2 then raise exception 'quest XP did not update level'; end if;
+
+  v_result:=public.claim_garriverse_quest(
+    '11111111-1111-4111-8111-111111111111','d-plant',v_period,'ci-quest-claim-001',19
+  );
+  if coalesce((v_result->>'duplicate')::boolean,false) is not true
+     or (v_result->>'revision')::bigint<>20 then
+    raise exception 'quest idempotent retry changed result';
+  end if;
+
+  v_quests:=public.get_garriverse_quests('11111111-1111-4111-8111-111111111111');
+  if coalesce((v_quests#>>'{quests,0,claimed}')::boolean,false) is not true then
+    raise exception 'quest claimed status not persisted';
+  end if;
+
+  begin
+    perform public.claim_garriverse_quest(
+      '11111111-1111-4111-8111-111111111111','d-water',
+      v_quests#>>'{quests,1,periodKey}','ci-quest-water-fail',20
+    );
+    raise exception 'incomplete water quest must not be claimable';
+  exception when sqlstate '22023' then
+    if SQLERRM<>'quest_not_complete' then raise; end if;
+  end;
+end
+$;
+
 select 'GARRIVERSE SQL migration integration tests passed' as result;
