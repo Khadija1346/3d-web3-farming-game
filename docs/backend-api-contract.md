@@ -41,7 +41,7 @@ This is a backend foundation, not yet the live gameplay save loop. The 3D client
 
 
 ## 3D gameplay cloud connection (partial milestone)
-When a valid Supabase session is present, `src/pages/Play.tsx` loads the signed-in player's saved state and configures `GameStore` to send till, plant, watering-can, weed, and harvest commands to `/.netlify/functions/farming-action`. The browser no longer advances crop growth in signed-in cloud mode; the SQL function advances crops from server elapsed time and derives XP, level, water use, stems and harvest yield. Each successful command returns a canonical state snapshot and revision which the client applies.
+When a valid Supabase session is present, `src/pages/Play.tsx` loads the signed-in player's saved state and configures `GameStore` to send till, plant, watering-can, refill-can, weed, and harvest commands to `/.netlify/functions/farming-action`. The browser no longer advances crop growth in signed-in cloud mode; the SQL function advances crops from server elapsed time and derives XP, level, water use, stems and harvest yield. Each successful command returns a canonical state snapshot and revision which the client applies.
 
 Without a signed-in account the game remains a local preview. In signed-in mode the current cloud milestone covers the five field actions only. Tanker/rain watering, factory processing, warehouse deposits, market sales, stem purchases, day/weather, and vehicle state are not yet cloud-backed; the UI labels factory and market as preview-only. No real-money or $GARRI reward path is enabled. The browser generates an idempotency key per command and submits only the action, plot ID, and expected revision.
 
