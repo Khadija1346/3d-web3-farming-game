@@ -5,6 +5,7 @@ import { FactoryPanel, MarketPanel, WarehousePanel } from '../components/Panels'
 import { GameStore, xpForLevel } from '../game/state'
 import { GarriWorld, PLOT_COUNT } from '../game/World'
 import { postToHost } from '../embed/bridge'
+import { fetchGameState, getSession, submitFarmingAction } from '../lib/auth'
 
 const fmtTime = (t: number) => {
   const h = Math.floor(t)
@@ -20,7 +21,35 @@ export default function Play({ embed = false }: { embed?: boolean }) {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [help, setHelp] = useState(true)
+  const [cloudStatus, setCloudStatus] = useState('Local preview · this session is not cloud-saved')
   const touch = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches, [])
+
+  useEffect(() => {
+    const session = getSession()
+    if (!session) {
+      store.setCloudCommandHandler(null)
+      setCloudStatus('Local preview · sign in to use account-backed farming')
+      return
+    }
+    let active = true
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => {
+      const result = await submitFarmingAction(action, plotId, revision)
+      return { state: result.state, revision: result.revision }
+    }
+    store.setCloudCommandHandler(handler, false)
+    setCloudStatus('Connecting your farmer account…')
+    fetchGameState().then(({ state }) => {
+      if (!active) return
+      if (state?.state && Array.isArray(state.state.plots)) store.hydrateCloudState(state.state, state.revision)
+      store.setCloudReady(true, state?.revision ?? 0)
+      setCloudStatus('Cloud farming connected · factory and market remain preview-only')
+    }).catch(() => {
+      if (!active) return
+      store.setCloudReady(false)
+      setCloudStatus('Cloud save unavailable · account farming actions paused')
+    })
+    return () => { active = false; store.setCloudCommandHandler(null) }
+  }, [store])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -104,8 +133,8 @@ export default function Play({ embed = false }: { embed?: boolean }) {
         <span title="In-game naira (no cash value)">₦{s.naira.toLocaleString()}</span>
       </div>
 
-      <div className="preview-badge" title="Progress is kept only in this tab until accounts launch">
-        Preview session
+      <div className="preview-badge" title="Only till, plant, watering-can, weed and harvest actions are currently server-authoritative">
+        {cloudStatus}
       </div>
 
       <div className="toasts">
