@@ -9,7 +9,7 @@ A premium 3D Nigerian farming and garri-processing game for mobile and desktop b
 - **`/hub`** — $GARRI token and community hub, live leaderboard when backend is connected, and honest pending states for integrations not yet configured.
 
 ## Gameplay
-The core loop is till → plant → water → weed → harvest → process through eight factory stages → store in warehouse → sell at Oja market. Signed-in accounts use server-authoritative actions for field work, factory, warehouse, market and tanker. Unsigned-in play is a local preview and is not cloud-saved.
+The core loop is till → plant → water → weed → harvest → process through eight factory stages → store in warehouse → sell at Oja market. Signed-in accounts use server-authoritative actions for field work, factory, warehouse, market and tanker. Daily, weekly and all-time quests track verified server actions and award in-game XP/stems only after a valid claim. Unsigned-in play is a local preview and is not cloud-saved.
 
 The in-game naira (₦), XP, roots, stems and garri inventory have no cash or token value. Real $GARRI rewards and withdrawals are disabled.
 
