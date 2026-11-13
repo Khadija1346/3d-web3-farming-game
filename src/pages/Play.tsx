@@ -149,7 +149,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
         <span title="In-game naira (no cash value)">₦{s.naira.toLocaleString()}</span>
       </div>
 
-      <div className="preview-badge" title="Only till, plant, watering-can, weed and harvest actions are currently server-authoritative">
+      <div className="preview-badge" title="Farming, factory, warehouse, market and tanker actions are server-authoritative for signed-in players">
         {cloudStatus}
       </div>
 
