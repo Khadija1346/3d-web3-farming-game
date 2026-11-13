@@ -1,52 +1,36 @@
 # GARRI: Rise of the Town
 
-A premium 3D Nigerian farming and garri-processing game for mobile and desktop browsers, with a roadmap toward
-accounts, a server-authoritative economy, Solana wallet identity, NFTs, the $GARRI token hub and an embeddable
-module for the Asta DAO app.
+A premium 3D Nigerian farming and garri-processing game for mobile and desktop browsers. Players can farm cassava, process garri, store and sell in-game goods, and save authoritative progress to a Supabase-backed account when the backend is deployed and configured.
 
-## What's in the app today
-- **`/`** — landing page.
-- **`/play`** — the playable 3D village: farm, borehole, river water district, garri factory (8 stages), warehouse,
-  Oja market, NPCs, day/night and rain, tractor and water tanker.
-- **`/embed`** — the same game without site chrome, for embedding in other apps.
-- **`/hub`** — $GARRI token info, official X/Telegram links, rewards model, quests, leaderboard and NFT gallery
-  (honest pending states until each service is connected).
+## App routes
+- **`/`** — landing page and farmer account.
+- **`/play`** — playable 3D village with farm, water district, factory, warehouse, Oja market, NPCs, day/night and rain visuals, tractor and water tanker.
+- **`/embed`** — chrome-less game view for an approved DAO/mobile host.
+- **`/hub`** — $GARRI token and community hub, live leaderboard when backend is connected, and honest pending states for integrations not yet configured.
 
-Progress in the preview lives only in the current browser tab.
+## Gameplay
+The core loop is till → plant → water → weed → harvest → process through eight factory stages → store in warehouse → sell at Oja market. Signed-in accounts use server-authoritative actions for field work, factory, warehouse, market and tanker. Unsigned-in play is a local preview and is not cloud-saved.
+
+The in-game naira (₦), XP, roots, stems and garri inventory have no cash or token value. Real $GARRI rewards and withdrawals are disabled.
 
 ## Controls
 Desktop: WASD/arrows to move, Shift to run, drag to look, scroll to zoom, **E** to interact, **F** to enter/leave a vehicle.
 Mobile: left thumbstick, drag to look, pinch to zoom, on-screen action / Drive / Run buttons.
 
 ## Tech
-React 19 · TypeScript · Vite 8 · Babylon.js 8 · React Router 7 · deployed on Netlify (static build, SPA fallback).
-All 3D assets are generated procedurally at runtime (no third-party model licences).
+React 19 · TypeScript · Vite 8 · Babylon.js 8 · React Router 7 · Netlify Functions · Supabase Auth/Postgres.
 
-## Run locally
+## Local development
 ```bash
 npm install
 npm run dev
 ```
 
-## Configuration
-Copy `.env.example` and set values in Netlify → Environment variables once the GARRI team confirms them:
+## Backend setup
+Read [docs/supabase-setup.md](./docs/supabase-setup.md) and [docs/backend-api-contract.md](./docs/backend-api-contract.md). Apply migrations 0001–0004 in order and configure the server-only Netlify environment variables. Never expose the Supabase service-role key to the browser.
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_GARRI_MINT_ADDRESS` | Official $GARRI mint address (empty = shown as pending) |
-| `VITE_GARRI_NETWORK` | Network label, defaults to `Solana` |
-| `VITE_GARRI_PUMPFUN_URL` | Official Pump.fun page; must start with `https://pump.fun/` to enable BUY |
-| `VITE_GARRI_WEBSITE_URL` | Official website link |
+## Embedding
+Load `/embed` full-screen in an approved WebView or iframe. The game emits `garri:ready` and `garri:level` events through `window.parent.postMessage` and an optional `window.GarriHost.onEvent` hook. See [src/embed/bridge.ts](./src/embed/bridge.ts).
 
-## Embedding (Asta DAO / Capacitor)
-Load `/embed` full-screen in a WebView or iframe. The game emits events to the host via `window.parent.postMessage`
-and, if present, `window.GarriHost.onEvent(event)`:
-
-| Event | Payload |
-| --- | --- |
-| `garri:ready` | `{ type, version: 1 }` — scene loaded |
-| `garri:level` | `{ type, level }` — player levelled up |
-
-## Roadmap
-See [PLAN.md](./PLAN.md): backend & server-authoritative state, accounts (email/Google/X), progression systems,
-wallet sign-in, social verification, NFTs, reward ledger, Moderator Office, Capacitor packaging and world polish.
+## Roadmap and launch blockers
+See [PLAN.md](./PLAN.md). Google/X OAuth, wallet sign-in, live token data, social verification, quests, NFTs, moderator tools and real-token payouts still require implementation and/or official team configuration.
