@@ -58,3 +58,27 @@ export async function verifySession() {
 export async function fetchLeaderboard() {
   return request<{ players: Array<{ user_id: string; display_name: string; xp: number; level: number; rank: number }> }>('leaderboard?limit=10')
 }
+
+
+export interface CloudGameState {
+  schema_version: number
+  state: Record<string, unknown>
+  revision: number
+  updated_at: string
+}
+export async function fetchGameState() {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ state: CloudGameState | null }>('game-state', {
+    headers: { Authorization: 'Bearer ' + session.access_token },
+  })
+}
+export async function submitFarmingAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, expectedRevision: number) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ state: Record<string, unknown>; revision: number; xp_gain: number; level: number; duplicate: boolean }>('farming-action', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ action, plotId, idempotencyKey: crypto.randomUUID(), expectedRevision }),
+  })
+}
