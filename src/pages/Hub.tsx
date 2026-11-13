@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { SiteFooter, SiteHeader, StatusPill } from '../components/Brand'
 import { GARRI_SOCIAL, GARRI_TOKEN, isBuyLinkConfigured, isTokenConfigured } from '../config/garri'
 import { QUEST_TEMPLATES } from '../fixtures/catalog'
-import { fetchLeaderboard } from '../lib/auth'
+import { claimQuest, fetchLeaderboard, fetchQuests, getSession, type QuestProgress } from '../lib/auth'
 
 function CopyAddress({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
@@ -13,7 +13,21 @@ export default function Hub() {
   const tokenReady = isTokenConfigured(), buyReady = isBuyLinkConfigured()
   const [players, setPlayers] = useState<Array<{ user_id: string; display_name: string; xp: number; level: number; rank: number }>>([])
   const [leaderboardStatus, setLeaderboardStatus] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading')
+  const [questState, setQuestState] = useState<{ revision: number; quests: QuestProgress[] } | null>(null)
+  const [questStatus, setQuestStatus] = useState<'loading' | 'ready' | 'signed_out' | 'error'>(getSession() ? 'loading' : 'signed_out')
+  const [claimingQuest, setClaimingQuest] = useState<string | null>(null)
+  const [questMessage, setQuestMessage] = useState('')
   useEffect(() => { let active = true; fetchLeaderboard().then(data => { if (!active) return; setPlayers(data.players || []); setLeaderboardStatus(data.players?.length ? 'ready' : 'empty') }).catch(() => { if (active) setLeaderboardStatus('error') }); return () => { active = false } }, [])
+  useEffect(() => { if (!getSession()) { setQuestStatus('signed_out'); return }; let active = true; fetchQuests().then(data => { if (active) { setQuestState(data); setQuestStatus('ready') } }).catch(() => { if (active) setQuestStatus('error') }); return () => { active = false } }, [])
+  async function handleQuestClaim(quest: QuestProgress) {
+    if (!questState || claimingQuest) return
+    setClaimingQuest(quest.id); setQuestMessage('')
+    try {
+      await claimQuest(quest.id, quest.periodKey, questState.revision)
+      const latest = await fetchQuests(); setQuestState(latest); setQuestMessage('Quest reward saved to your account.')
+    } catch (error) { setQuestMessage(error instanceof Error ? error.message.replaceAll('_', ' ') : 'Quest claim failed.') }
+    finally { setClaimingQuest(null) }
+  }
   return (
     <div className="page">
       <SiteHeader />
@@ -34,7 +48,13 @@ export default function Hub() {
           <div className="tier"><h3>In-game resources</h3><p>Stems, roots, garri bags and in-game naira (₦). No cash value, never withdrawable.</p><StatusPill state="preview" /></div>
           <div className="tier locked"><h3>Real $GARRI rewards</h3><p>Team approval has been reported. Payouts remain disabled until the exact approved contract, tokenomics, eligibility rules, audit and payout operations are configured.</p><StatusPill state="pending" /></div>
         </div></section>
-        <section className="card"><div className="card-top"><h2>Quests</h2><StatusPill state="pending" /></div><ul className="quest-list">{QUEST_TEMPLATES.map(q => <li key={q.id}><span className={`cad cad-${q.cadence}`}>{q.cadence}</span><div><strong>{q.title}</strong><small>{q.goal} · {q.reward}</small></div></li>)}</ul><p className="fine">Quest templates are published, but progress and reward claims are not enabled until the server-side quest ledger is implemented.</p></section>
+        <section className="card"><div className="card-top"><h2>Quests</h2><StatusPill state={questStatus === 'ready' ? 'live' : questStatus === 'loading' ? 'preview' : 'pending'} /></div>
+          {questStatus === 'ready' && questState ? <ul className="quest-list">{questState.quests.map(q => <li key={q.id}><span className={`cad cad-${q.cadence}`}>{q.cadence}</span><div><strong>{q.title}</strong><small>{q.progress}/{q.target} complete · {q.reward.xp} XP{q.reward.stems ? ` · ${q.reward.stems} stems` : ''}</small><div className="xpbar"><i style={{ width: `${Math.min(100, q.progress / q.target * 100)}%` }} /></div></div><button className="btn btn-sm btn-primary" disabled={q.claimed || q.progress < q.target || Boolean(claimingQuest)} onClick={() => handleQuestClaim(q)}>{q.claimed ? 'Claimed' : claimingQuest === q.id ? 'Claiming…' : 'Claim'}</button></li>)}</ul>
+          : <ul className="quest-list">{QUEST_TEMPLATES.map(q => <li key={q.id}><span className={`cad cad-${q.cadence}`}>{q.cadence}</span><div><strong>{q.title}</strong><small>{q.goal} · {q.reward}</small></div></li>)}</ul>}
+          {questMessage && <p className="fine" role="status">{questMessage}</p>}
+          {questStatus === 'signed_out' && <p className="fine">Sign in to track server-verified progress and claim XP rewards. No progress is fabricated.</p>}
+          {questStatus === 'error' && <p className="fine">Quest service is not reachable. Try again after the backend is deployed and migration 0005 is applied.</p>}
+        </section>
         <section className="card"><div className="card-top"><h2>Global leaderboard</h2><StatusPill state={leaderboardStatus === 'ready' ? 'live' : leaderboardStatus === 'loading' ? 'preview' : 'pending'} /></div>
           {leaderboardStatus === 'ready' ? <ol className="leaderboard-list">{players.map(p => <li key={p.user_id}><span className="leader-rank">#{p.rank}</span><span className="leader-name">{p.display_name}</span><span className="leader-score">Lv {p.level} · {p.xp} XP</span></li>)}</ol> : <div className="empty"><p>{leaderboardStatus === 'loading' ? 'Loading rankings…' : leaderboardStatus === 'error' ? 'Leaderboard is temporarily unavailable.' : 'No rankings yet.'}</p><small>Only registered players with server-verified actions appear here.</small></div>}
           <Link to="/" className="btn btn-ghost btn-block">Farmer account</Link><Link to="/play" className="btn btn-ghost btn-block">Practise in the village</Link>
