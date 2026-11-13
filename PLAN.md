@@ -14,7 +14,7 @@
 - Server-authoritative field actions: till, plant, water, weed, harvest and watering-can refill.
 - Server-authoritative factory, warehouse, market and tanker actions.
 - Idempotency keys, optimistic revision checks, server-time crop growth and server-time factory stage validation.
-- GitHub Actions applies migrations 0001–0004 to ephemeral PostgreSQL and tests gameplay RPCs.
+- GitHub Actions applies migrations 0001–0005 to ephemeral PostgreSQL and tests gameplay and quest RPCs.
 
 ## Milestone 3 — Accounts
 **Email/password implementation present; deployment verification pending**
