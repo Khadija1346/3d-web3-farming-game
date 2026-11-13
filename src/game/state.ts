@@ -75,7 +75,7 @@ export class GameStore {
   private dirty = false
   private emitTimer = 0
   private weatherTimer = 70
-  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
+  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
   private cloudReady = false
   private cloudRevision = 0
   private cloudPending = new Set<string>()
@@ -107,7 +107,7 @@ export class GameStore {
     this.published = this.s
   }
 
-  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
+  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
     this.cloudHandler = handler
     this.cloudReady = ready
   }
@@ -141,7 +141,7 @@ export class GameStore {
     this.emit()
   }
 
-  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', id: number) {
+  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', id: number) {
     if (!this.cloudHandler) return false
     if (!this.cloudReady) { this.toast('Cloud save is still connecting. Please wait.', 'warn'); return true }
     const key = action + ':' + id
@@ -278,6 +278,7 @@ export class GameStore {
   }
 
   refillCan() {
+    if (this.cloudHandler) return this.cloudAction('refill_can', -1)
     if (this.s.waterCan >= ECONOMY.wateringCanUses) return false
     this.commit({ waterCan: ECONOMY.wateringCanUses })
     this.toast('Watering can refilled')
@@ -285,6 +286,7 @@ export class GameStore {
   }
 
   refillTanker() {
+    if (this.cloudHandler) { this.toast('Tanker refills are not cloud-enabled yet.', 'warn'); return false }
     if (this.s.tankerWater >= ECONOMY.tankerCapacity) return false
     this.commit({ tankerWater: ECONOMY.tankerCapacity })
     this.toast('Water tanker refilled at the river pump')
@@ -293,6 +295,7 @@ export class GameStore {
 
   // ---- factory ----
   startBatch() {
+    if (this.cloudHandler) { this.toast('Factory and market actions are still preview-only for signed-in accounts.', 'warn'); return false }
     if (this.s.factory) return false
     if (this.s.roots < ECONOMY.rootsPerBatch) {
       this.toast(`You need ${ECONOMY.rootsPerBatch} cassava roots to start a batch`, 'warn')
@@ -304,6 +307,7 @@ export class GameStore {
   }
 
   runStage() {
+    if (this.cloudHandler) { this.toast('Factory and market actions are still preview-only for signed-in accounts.', 'warn'); return false }
     const f = this.s.factory
     if (!f || f.running) return false
     this.commit({ factory: { ...f, running: true, progress: 0 } })
@@ -312,6 +316,7 @@ export class GameStore {
 
   // ---- warehouse & market ----
   deposit() {
+    if (this.cloudHandler) { this.toast('Factory and market actions are still preview-only for signed-in accounts.', 'warn'); return false }
     if (this.s.garriCarried <= 0) return false
     this.commit({ garriStored: this.s.garriStored + this.s.garriCarried, garriCarried: 0 })
     this.toast('Garri stored in the warehouse')
@@ -319,6 +324,7 @@ export class GameStore {
   }
 
   sellBag() {
+    if (this.cloudHandler) { this.toast('Factory and market actions are still preview-only for signed-in accounts.', 'warn'); return false }
     if (this.s.garriStored <= 0) {
       this.toast('No garri in the warehouse to sell', 'warn')
       return false
@@ -329,6 +335,7 @@ export class GameStore {
   }
 
   buyStems() {
+    if (this.cloudHandler) { this.toast('Factory and market actions are still preview-only for signed-in accounts.', 'warn'); return false }
     if (this.s.naira < ECONOMY.stemBundlePrice) {
       this.toast('Not enough in-game naira', 'warn')
       return false
@@ -421,8 +428,8 @@ export class GameStore {
       false,
     )
     if (matured.length) this.toast(`Cassava ready to harvest on ${matured.length} plot${matured.length > 1 ? 's' : ''}`)
-    if (packaged) this.gainXp(XP_REWARDS.package, `Packaged ${ECONOMY.bagsPerBatch} bags of garri`)
-    else if (finishedStage) this.gainXp(XP_REWARDS.processStage, `${finishedStage} done`)
+    if (!this.cloudHandler && packaged) this.gainXp(XP_REWARDS.package, `Packaged ${ECONOMY.bagsPerBatch} bags of garri`)
+    else if (!this.cloudHandler && finishedStage) this.gainXp(XP_REWARDS.processStage, `${finishedStage} done`)
 
     this.emitTimer += dt
     if (this.dirty && this.emitTimer > 0.2) {
