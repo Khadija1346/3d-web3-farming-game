@@ -100,3 +100,15 @@ export async function submitEconomyAction(action: EconomyAction, expectedRevisio
     body: JSON.stringify({ action, idempotencyKey, expectedRevision }),
   })
 }
+
+export type UtilityAction = 'water_tanker' | 'refill_tanker'
+
+export async function submitUtilityAction(action: UtilityAction, plotId: number, expectedRevision: number, idempotencyKey: string = crypto.randomUUID()) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ state: Record<string, unknown>; revision: number; xp_gain: number; level: number; duplicate: boolean }>('utility-action', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ action, ...(action === 'water_tanker' ? { plotId } : {}), idempotencyKey, expectedRevision }),
+  })
+}
