@@ -18,6 +18,8 @@ Never commit credentials or paste them into chat. Rotate any credential previous
 | POST | `/.netlify/functions/auth-logout` | End Supabase session |
 | GET | `/.netlify/functions/game-state` | Read the authenticated player's saved state |
 | GET | `/.netlify/functions/leaderboard?limit=20` | Public leaderboard, limit 1–50 |
+| GET | `/.netlify/functions/quests` | Authenticated daily, weekly and all-time quest progress |
+| POST | `/.netlify/functions/quest-claim` | Atomic server-validated quest reward claim |
 | POST | `/.netlify/functions/farming-action` | Server-authoritative field actions |
 | POST | `/.netlify/functions/economy-action` | Server-authoritative factory, warehouse and in-game market actions |
 | POST | `/.netlify/functions/utility-action` | Server-authoritative tanker watering and river-pump refills |
