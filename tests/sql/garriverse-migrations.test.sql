@@ -75,7 +75,7 @@ begin
 end
 $$;
 
-do $
+do $$
 declare
   v_result jsonb;
   v_xp bigint;
