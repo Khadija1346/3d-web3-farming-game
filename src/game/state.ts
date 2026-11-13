@@ -79,6 +79,7 @@ export class GameStore {
   private cloudReady = false
   private cloudRevision = 0
   private cloudPending = new Set<string>()
+  private cloudKeys = new Map<string, string>()
 
   constructor(plotCount: number) {
     this.s = {
@@ -147,9 +148,12 @@ export class GameStore {
     if (this.cloudPending.has(key)) return true
     this.cloudPending.add(key)
     const handler = this.cloudHandler
-    void handler(action, id, this.cloudRevision).then(result => {
+    const idempotencyKey = this.cloudKeys.get(key) ?? crypto.randomUUID()
+    this.cloudKeys.set(key, idempotencyKey)
+    void handler(action, id, this.cloudRevision, idempotencyKey).then(result => {
       if (this.cloudHandler !== handler) return
       this.hydrateCloudState(result.state, result.revision)
+      this.cloudKeys.delete(key)
       this.toast('Farming progress saved to your account', 'info')
     }).catch(error => {
       this.toast(error instanceof Error ? error.message.replaceAll('_',' ') : 'Cloud action failed. Try again.', 'warn')
