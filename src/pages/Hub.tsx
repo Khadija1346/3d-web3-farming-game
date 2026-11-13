@@ -32,7 +32,7 @@ export default function Hub() {
         <section className="card wide"><div className="card-top"><h2>How rewards are separated</h2></div><div className="tiers">
           <div className="tier"><h3>XP &amp; levels</h3><p>Earned from every farming and factory action. Playable now in the village.</p><StatusPill state="preview" /></div>
           <div className="tier"><h3>In-game resources</h3><p>Stems, roots, garri bags and in-game naira (₦). No cash value, never withdrawable.</p><StatusPill state="preview" /></div>
-          <div className="tier locked"><h3>Real $GARRI rewards</h3><p>Off until the GARRI team approves contracts, tokenomics and eligibility. Every future payout will be recorded in an auditable ledger.</p><StatusPill state="pending" /></div>
+          <div className="tier locked"><h3>Real $GARRI rewards</h3><p>Team approval has been reported. Payouts remain disabled until the exact approved contract, tokenomics, eligibility rules, audit and payout operations are configured.</p><StatusPill state="pending" /></div>
         </div></section>
         <section className="card"><div className="card-top"><h2>Quests</h2><StatusPill state="pending" /></div><ul className="quest-list">{QUEST_TEMPLATES.map(q => <li key={q.id}><span className={`cad cad-${q.cadence}`}>{q.cadence}</span><div><strong>{q.title}</strong><small>{q.goal} · {q.reward}</small></div></li>)}</ul><p className="fine">Quest templates are published, but progress and reward claims are not enabled until the server-side quest ledger is implemented.</p></section>
         <section className="card"><div className="card-top"><h2>Global leaderboard</h2><StatusPill state={leaderboardStatus === 'ready' ? 'live' : leaderboardStatus === 'loading' ? 'preview' : 'pending'} /></div>
