@@ -1,17 +1,31 @@
-/** Runtime health endpoint: reports configuration presence, not DB reachability. */
+import { adminRequest, json } from './_lib/supabase.mts'
+
 export default async (_request: Request) => {
   const configured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY)
-  return Response.json({
+  if (!configured) {
+    return json({
+      service: 'garriverse-api',
+      status: 'not_configured',
+      capabilities: { authentication: 'not_configured', database: 'not_configured', cloudGameplay: 'not_configured', realTokenRewards: 'disabled' },
+      timestamp: new Date().toISOString(),
+    }, 503)
+  }
+
+  const [database, leaderboard] = await Promise.all([
+    adminRequest('player_game_states?select=user_id&limit=0').then(r => r.ok).catch(() => false),
+    adminRequest('player_leaderboard?select=user_id&limit=0').then(r => r.ok).catch(() => false),
+  ])
+  const ready = database && leaderboard
+  return json({
     service: 'garriverse-api',
-    status: 'ok',
-    version: '0.2.0',
+    status: ready ? 'ready' : 'degraded',
     capabilities: {
-      supabaseCredentials: configured ? 'configured_not_connection_tested' : 'not_configured',
-      authentication: configured ? 'endpoints_available' : 'not_configured',
-      playerStateRead: configured ? 'endpoint_available' : 'not_configured',
-      playerStateWrite: 'disabled_until_server_authoritative_actions',
+      authentication: 'configured_check_login_to_verify',
+      database: database ? 'connected' : 'unavailable_or_migrations_missing',
+      leaderboard: leaderboard ? 'connected' : 'unavailable_or_migrations_missing',
+      cloudGameplay: ready ? 'schema_connected_rpc_not_exercised' : 'not_ready',
       realTokenRewards: 'disabled',
     },
     timestamp: new Date().toISOString(),
-  }, { status: 200, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } })
+  }, ready ? 200 : 503)
 }
