@@ -23,9 +23,10 @@
 - Current browser session storage is not an httpOnly-cookie session. Harden session storage before treating this as a high-assurance production identity system.
 
 ## Milestone 4 — Quests and progression
-**Pending**
-- Daily/weekly quest progress and server-side claims.
-- Referral validation, achievements, seasonal competitions and anti-cheat cadence rules.
+**Core quest loop implemented; extended progression pending**
+- Daily planting/watering, weekly packaged-bag and all-time till quests derive progress from server action events.
+- Server validates claim periods, completion, idempotency and atomic XP/stem rewards.
+- Referral validation, achievements, seasonal competitions and broader anti-cheat cadence rules remain pending.
 
 ## Milestone 5 — Wallet identity and token hub
 **Pending external configuration and implementation**
