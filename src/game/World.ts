@@ -148,11 +148,11 @@ export class GarriWorld {
     this.mats = new Mats(scene)
 
     // camera
-    const cam = (this.camera = new ArcRotateCamera('cam', -Math.PI / 2, 1.08, 15, new Vector3(2, 1.6, -6), scene))
+    const cam = (this.camera = new ArcRotateCamera('cam', -Math.PI / 2, mobile ? 1.02 : 1.08, mobile ? 12.5 : 15, new Vector3(2, 1.6, -6), scene))
     cam.attachControl(canvas, true)
     cam.inputs.removeByType('ArcRotateCameraKeyboardMoveInput')
-    cam.lowerRadiusLimit = 6
-    cam.upperRadiusLimit = 34
+    cam.lowerRadiusLimit = mobile ? 7 : 6
+    cam.upperRadiusLimit = mobile ? 25 : 34
     cam.lowerBetaLimit = 0.4
     cam.upperBetaLimit = 1.42
     cam.panningSensibility = 0
