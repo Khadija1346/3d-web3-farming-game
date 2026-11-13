@@ -34,7 +34,7 @@ export default function AccountPanel() {
       <div className="account-copy">
         <p className="eyebrow">Farmer account</p>
         <h2>{user ? 'Welcome back, farmer' : 'Create your farmer account'}</h2>
-        <p className="muted">Use your account to access verified player services. Cloud saving of farming progress is being connected separately and is not active yet.</p>
+        <p className="muted">Create an email account or sign in to use server-backed farming and save your progress. Google and X sign-in are not connected yet.</p>
       </div>
       {user ? (
         <div className="account-signed">
