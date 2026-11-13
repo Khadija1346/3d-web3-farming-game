@@ -195,7 +195,7 @@ begin
 end
 $$;
 
-do $
+do $$
 declare
   v_result jsonb;
   v_quests jsonb;
@@ -257,6 +257,6 @@ begin
     if SQLERRM<>'quest_not_complete' then raise; end if;
   end;
 end
-$;
+$$;
 
 select 'GARRIVERSE SQL migration integration tests passed' as result;
