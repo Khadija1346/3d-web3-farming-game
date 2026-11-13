@@ -76,7 +76,7 @@ export class GameStore {
   private dirty = false
   private emitTimer = 0
   private weatherTimer = 70
-  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
+  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
   private cloudReady = false
   private cloudRevision = 0
   private cloudPending = new Set<string>()
@@ -108,7 +108,7 @@ export class GameStore {
     this.published = this.s
   }
 
-  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
+  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
     this.cloudHandler = handler
     this.cloudReady = ready
   }
@@ -143,7 +143,7 @@ export class GameStore {
     this.emit()
   }
 
-  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems', id: number) {
+  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', id: number) {
     if (!this.cloudHandler) return false
     if (!this.cloudReady) { this.toast('Cloud save is still connecting. Please wait.', 'warn'); return true }
     const key = action + ':' + id
@@ -235,7 +235,8 @@ export class GameStore {
 
   water(id: number, source: 'can' | 'tanker' | 'rain' = 'can') {
     if (this.cloudHandler) {
-      if (source !== 'can') { this.toast('Cloud accounts currently support watering-can actions only.', 'warn'); return false }
+      if (source === 'tanker') return this.cloudAction('water_tanker', id)
+      if (source === 'rain') { this.toast('Rain watering is visual only while cloud simulation is active.', 'warn'); return false }
       return this.cloudAction('water', id)
     }
     const p = this.s.plots[id]
@@ -288,7 +289,7 @@ export class GameStore {
   }
 
   refillTanker() {
-    if (this.cloudHandler) { this.toast('Tanker refills are not cloud-enabled yet.', 'warn'); return false }
+    if (this.cloudHandler) return this.cloudAction('refill_tanker', -1)
     if (this.s.tankerWater >= ECONOMY.tankerCapacity) return false
     this.commit({ tankerWater: ECONOMY.tankerCapacity })
     this.toast('Water tanker refilled at the river pump')
