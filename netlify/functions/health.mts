@@ -33,7 +33,8 @@ export default async (_request: Request) => {
     rpcExists('rpc/claim_garriverse_quest', { p_user_id: null, p_quest_id: null, p_period_key: null, p_idempotency_key: null, p_expected_revision: null }, 'invalid_quest_claim'),
   ])
   const cloudGameplay = farmingRpc && economyRpc && utilityRpc
-  const ready = authentication && database && leaderboard && cloudGameplay
+  const quests = questTable && questReadRpc && questClaimRpc
+  const ready = authentication && database && leaderboard && cloudGameplay && quests
   return json({
     service: 'garriverse-api',
     status: ready ? 'ready' : 'degraded',
