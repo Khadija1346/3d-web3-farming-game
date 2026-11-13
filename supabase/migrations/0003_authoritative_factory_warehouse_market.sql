@@ -92,7 +92,7 @@ begin
       end if;
       v_factory:=jsonb_set(v_factory,'{running}','true'::jsonb,true);
       v_factory:=jsonb_set(v_factory,'{progress}','0'::jsonb,true);
-      v_factory:=jsonb_set(v_factory,'{startedAt}',to_jsonb(now()),true);
+      v_factory:=jsonb_set(v_factory,'{startedAt}',to_jsonb(clock_timestamp()),true);
       v_state:=jsonb_set(v_state,'{factory}',v_factory,true);
 
     when 'factory_complete_stage' then
@@ -109,7 +109,7 @@ begin
       if v_started is null then raise exception using errcode='22023',message='factory_stage_not_started'; end if;
       v_seconds:=case v_stage when 0 then 3 when 1 then 2.5 when 2 then 3 when 3 then 8
         when 4 then 4 when 5 then 3 when 6 then 5 when 7 then 2.5 end;
-      if extract(epoch from (now()-v_started))<v_seconds then
+      if extract(epoch from (clock_timestamp()-v_started))<v_seconds then
         raise exception using errcode='22023',message='factory_stage_not_ready';
       end if;
       if v_stage=7 then
