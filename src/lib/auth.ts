@@ -112,3 +112,8 @@ export async function submitUtilityAction(action: UtilityAction, plotId: number,
     body: JSON.stringify({ action, ...(action === 'water_tanker' ? { plotId } : {}), idempotencyKey, expectedRevision }),
   })
 }
+export interface BackendHealth {
+  status: 'ready' | 'degraded' | 'not_configured'
+  capabilities: { authentication: string; database: string; leaderboard: string; cloudGameplay: string; realTokenRewards: 'disabled' }
+}
+export async function fetchBackendHealth() { return request<BackendHealth>('health') }
