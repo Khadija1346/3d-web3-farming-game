@@ -193,6 +193,6 @@ begin
   if v_xp<>32 then raise exception 'tanker XP sync mismatch: %',v_xp; end if;
 
 end
-$;
+$$;
 
 select 'GARRIVERSE SQL migration integration tests passed' as result;
