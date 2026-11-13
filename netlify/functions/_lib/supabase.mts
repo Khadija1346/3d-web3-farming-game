@@ -40,3 +40,12 @@ export async function authRequest(path: string, body: unknown) {
   if (!c) throw new Error('server_not_configured')
   return fetch(c.url + '/auth/v1/' + path, { method: 'POST', headers: { apikey: c.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 }
+
+export async function authServiceAvailable() {
+  const c = publicConfig()
+  if (!c) return false
+  try {
+    const r = await fetch(c.url + '/auth/v1/settings', { headers: { apikey: c.anonKey } })
+    return r.ok
+  } catch { return false }
+}
