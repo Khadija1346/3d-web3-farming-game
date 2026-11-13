@@ -89,7 +89,7 @@ export const INTEGRATIONS: Integration[] = [
   { name: 'Google / X sign-in', state: 'pending', note: 'Requires approved OAuth client configuration and callback URLs.' },
   { name: 'Solana wallet sign-in & token balance', state: 'pending', note: 'Requires the approved wallet sign-in flow and official $GARRI mint address.' },
   { name: 'NFT gallery', state: 'pending', note: 'Requires official collection addresses and a supported Solana asset data source.' },
-  { name: 'Social verification & quests', state: 'pending', note: 'Requires approved X API access and a GARRI Telegram bot with membership-check permissions.' },
+  { name: 'Social verification', state: 'pending', note: 'Requires approved X API access and a GARRI Telegram bot with membership-check permissions.' },
   { name: '$GARRI contract & buy link', state: 'pending', note: 'Requires the team-confirmed official mint address and Pump.fun URL.' },
   { name: 'Real $GARRI rewards & withdrawals', state: 'pending', note: 'Requires approved tokenomics, payout contract, eligibility rules, security review and operational controls.' },
 ]
