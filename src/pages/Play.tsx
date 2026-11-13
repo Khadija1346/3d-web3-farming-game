@@ -32,7 +32,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       return
     }
     let active = true
-    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => {
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId: number, revision: number, idempotencyKey: string) => {
       try {
         const result = await submitFarmingAction(action, plotId, revision, idempotencyKey)
         return { state: result.state, revision: result.revision }
