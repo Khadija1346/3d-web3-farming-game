@@ -75,4 +75,72 @@ begin
 end
 $$;
 
+  -- Prepare an owned batch for server-side factory lifecycle tests.
+  update public.player_game_states
+  set state=jsonb_set(state,'{roots}','5'::jsonb,true)
+  where user_id='11111111-1111-4111-8111-111111111111';
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','factory_start','ci-factory-start-01',3
+  );
+  if (v_result->>'revision')::bigint<>4 then raise exception 'factory start revision mismatch'; end if;
+  if (v_result#>>'{state,roots}')::integer<>0 then raise exception 'factory did not consume roots'; end if;
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','factory_run_stage','ci-factory-run-001',4
+  );
+  if (v_result->>'revision')::bigint<>5 then raise exception 'factory run revision mismatch'; end if;
+  if coalesce((v_result#>>'{state,factory,running}')::boolean,false) is not true then
+    raise exception 'factory stage did not start';
+  end if;
+  perform pg_sleep(3.2);
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','factory_complete_stage','ci-factory-done-01',5
+  );
+  if (v_result->>'revision')::bigint<>6 then raise exception 'factory completion revision mismatch'; end if;
+  if (v_result#>>'{state,factory,stageIndex}')::integer<>1 then raise exception 'factory stage did not advance'; end if;
+  if coalesce((v_result#>>'{state,factory,running}')::boolean,true) is not false then
+    raise exception 'next factory stage should await player start';
+  end if;
+
+  update public.player_game_states
+  set state=jsonb_set(state,'{garriCarried}','2'::jsonb,true)
+  where user_id='11111111-1111-4111-8111-111111111111';
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','warehouse_deposit','ci-warehouse-01',6
+  );
+  if (v_result#>>'{state,garriCarried}')::integer<>0
+     or (v_result#>>'{state,garriStored}')::integer<>2 then
+    raise exception 'warehouse deposit did not transfer carried bags';
+  end if;
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','market_sell','ci-market-sell-01',7
+  );
+  if (v_result#>>'{state,garriStored}')::integer<>1
+     or (v_result#>>'{state,naira}')::integer<>1700 then
+    raise exception 'market sale did not update in-game inventory and balance';
+  end if;
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','market_buy_stems','ci-market-buy-01',8
+  );
+  if (v_result#>>'{state,stems}')::integer<>15
+     or (v_result#>>'{state,naira}')::integer<>1550 then
+    raise exception 'market stem purchase did not update inventory and balance';
+  end if;
+
+  v_result:=public.apply_garriverse_economy_action(
+    '11111111-1111-4111-8111-111111111111','market_buy_stems','ci-market-buy-01',8
+  );
+  if coalesce((v_result->>'duplicate')::boolean,false) is not true
+     or (v_result->>'revision')::bigint<>9 then
+    raise exception 'economy idempotency retry changed result';
+  end if;
+
+  select xp into v_xp from public.player_profiles
+  where user_id='11111111-1111-4111-8111-111111111111';
+  if v_xp<>29 then raise exception 'economy XP sync mismatch: %',v_xp; end if;
+
 select 'GARRIVERSE SQL migration integration tests passed' as result;
