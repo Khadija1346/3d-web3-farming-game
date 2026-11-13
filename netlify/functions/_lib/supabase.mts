@@ -30,7 +30,7 @@ export async function adminRequest(path: string) {
   if (!c) throw new Error('server_not_configured')
   return fetch(c.url + '/rest/v1/' + path, { headers: { apikey: c.serviceKey, Authorization: 'Bearer ' + c.serviceKey } })
 }
-export async function authRequest(path: string, body: unknown) {
+export async function adminPost(path: string, body: unknown) {\n  const c = supabaseConfig()\n  if (!c) throw new Error('server_not_configured')\n  return fetch(c.url + '/rest/v1/' + path, { method: 'POST', headers: { apikey: c.serviceKey, Authorization: 'Bearer ' + c.serviceKey, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(body) })\n}\nexport async function authRequest(path: string, body: unknown) {
   const c = publicConfig()
   if (!c) throw new Error('server_not_configured')
   return fetch(c.url + '/auth/v1/' + path, { method: 'POST', headers: { apikey: c.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
