@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteFooter, SiteHeader, StatusPill, cdn } from '../components/Brand'
 import AccountPanel from '../components/AccountPanel'
 import { FACTORY_STAGES, INTEGRATIONS } from '../fixtures/catalog'
+import { fetchBackendHealth, type BackendHealth } from '../lib/auth'
 
 const LOOP = [
   { n: '01', title: 'Plant', body: 'Clear the bush, till ridges and set cassava stems — by hand or with the tractor.' },
@@ -11,6 +13,14 @@ const LOOP = [
 ]
 
 export default function Landing() {
+  const [backend, setBackend] = useState<BackendHealth | null>(null)
+  useEffect(() => { let active = true; fetchBackendHealth().then(value => { if (active) setBackend(value) }).catch(() => { if (active) setBackend(null) }); return () => { active = false } }, [])
+  const integrations = INTEGRATIONS.map(item => {
+    if (item.name === 'Email/password accounts') return { ...item, state: backend?.capabilities.authentication === 'connected' ? 'live' as const : 'pending' as const, note: backend?.capabilities.authentication === 'connected' ? 'Supabase Auth is reachable from the deployed API.' : 'Waiting for Supabase Auth configuration and a successful health check.' }
+    if (item.name === 'Cloud saves & leaderboard') return { ...item, state: backend?.capabilities.database === 'connected' && backend?.capabilities.leaderboard === 'connected' ? 'live' as const : 'pending' as const, note: backend?.capabilities.database === 'connected' && backend?.capabilities.leaderboard === 'connected' ? 'Player state and the real leaderboard database are reachable.' : 'Waiting for database migrations and server configuration.' }
+    if (item.name === 'Server-backed farming, factory, warehouse, market & tanker') return { ...item, state: backend?.capabilities.cloudGameplay === 'rpc_functions_present' ? 'live' as const : 'pending' as const, note: backend?.capabilities.cloudGameplay === 'rpc_functions_present' ? 'Farming, factory, warehouse, market and tanker RPCs are present on the connected database.' : 'Waiting for all authoritative gameplay migrations and RPCs.' }
+    return item
+  })
   return (
     <div className="page">
       <SiteHeader />
@@ -41,7 +51,7 @@ export default function Landing() {
       </section>
       <section className="section">
         <div className="section-head"><p className="eyebrow">Built honestly</p><h2>What’s live, and what’s coming</h2><p className="muted narrow">Balances, NFTs, rankings and social checks only appear once they are backed by real services. Until then you’ll see exactly where each piece stands.</p></div>
-        <ul className="status-list">{INTEGRATIONS.map(i => <li key={i.name}><div><strong>{i.name}</strong><span>{i.note}</span></div><StatusPill state={i.state} /></li>)}</ul>
+        <ul className="status-list">{integrations.map(i => <li key={i.name}><div><strong>{i.name}</strong><span>{i.note}</span></div><StatusPill state={i.state} /></li>)}</ul>
       </section>
       <section className="section embed-band">
         <div><p className="eyebrow">For the Asta DAO app</p><h2>One module, embeddable anywhere</h2><p className="muted">The village runs as a self-contained web module at <code>/embed</code> — full-screen, touch-first and ready to wrap with Capacitor. It talks to its host through documented window messages, never private APIs.</p></div>
