@@ -117,3 +117,30 @@ export interface BackendHealth {
   capabilities: { authentication: string; database: string; leaderboard: string; cloudGameplay: string; realTokenRewards: 'disabled' }
 }
 export async function fetchBackendHealth() { return request<BackendHealth>('health') }
+
+export interface QuestProgress {
+  id: string
+  title: string
+  cadence: 'daily' | 'weekly' | 'special'
+  periodKey: string
+  progress: number
+  target: number
+  reward: { xp: number; stems?: number }
+  claimed: boolean
+}
+export async function fetchQuests() {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ revision: number; quests: QuestProgress[] }>('quests', {
+    headers: { Authorization: 'Bearer ' + session.access_token },
+  })
+}
+export async function claimQuest(questId: string, periodKey: string, expectedRevision: number, idempotencyKey: string = crypto.randomUUID()) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ state: Record<string, unknown>; revision: number; reward: { xp: number; stems: number }; duplicate: boolean }>('quest-claim', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ questId, periodKey, expectedRevision, idempotencyKey }),
+  })
+}
