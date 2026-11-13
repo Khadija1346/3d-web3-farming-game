@@ -29,6 +29,12 @@ declare
   v_new_level integer;
   v_needed integer;
   v_roots_yield integer;
+  v_last_tick timestamptz;
+  v_elapsed numeric;
+  v_growth numeric;
+  v_water_level numeric;
+  v_weeds numeric;
+  v_total_xp bigint;
 begin
   if p_user_id is null or p_action_type is null or p_action_type not in ('till','plant','water','weed','harvest') then
     raise exception using errcode = '22023', message = 'invalid_action';
@@ -55,7 +61,15 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'player_state_missing';
   end if;
-  -- Recheck after the row lock: concurrent retries with the same key may have waited here.\n  select result into v_existing\n  from public.game_action_events\n  where user_id = p_user_id and idempotency_key = p_idempotency_key;\n  if found then\n    return v_existing || jsonb_build_object('duplicate', true);\n  end if;\n\n  if p_expected_revision is not null and p_expected_revision <> v_revision then
+  -- Recheck after the row lock: concurrent retries with the same key may have waited here.
+  select result into v_existing
+  from public.game_action_events
+  where user_id = p_user_id and idempotency_key = p_idempotency_key;
+  if found then
+    return v_existing || jsonb_build_object('duplicate', true);
+  end if;
+
+  if p_expected_revision is not null and p_expected_revision <> v_revision then
     raise exception using errcode = '40001', message = 'revision_conflict';
   end if;
 
@@ -68,12 +82,33 @@ begin
     v_state := jsonb_build_object(
       'plots', v_plots, 'stems', 12, 'roots', 0, 'garriCarried', 0,
       'garriStored', 0, 'naira', 500, 'waterCan', 5, 'tankerWater', 100,
-      'xp', 0, 'level', 1,
+      'xp', 0, 'totalXp', 0, 'level', 1,
+      'lastSimulatedAt', now(),
       'stats', jsonb_build_object('harvested',0,'bagsMade',0,'plotsTilled',0)
     );
   end if;
 
+  -- Advance crop growth using server elapsed time; browser timers are never trusted.
+  v_last_tick := coalesce((v_state->>'lastSimulatedAt')::timestamptz, now());
+  v_elapsed := greatest(0, least(3600, extract(epoch from (now() - v_last_tick))));
   v_plots := v_state->'plots';
+  for v_roots in 0..jsonb_array_length(v_plots)-1 loop
+    v_plot := v_plots->v_roots;
+    if v_plot->>'stage' = 'planted' and v_elapsed > 0 then
+      v_water_level := greatest(0, coalesce((v_plot->>'water')::numeric,0) - v_elapsed / 55.0);
+      v_weeds := least(1, coalesce((v_plot->>'weeds')::numeric,0) + v_elapsed / 110.0);
+      v_growth := least(1, coalesce((v_plot->>'growth')::numeric,0) + (v_elapsed / 90.0) * case when coalesce((v_plot->>'water')::numeric,0) > 0 then 1 - v_weeds * 0.7 else 0 end);
+      if v_growth >= 1 then
+        v_plot := jsonb_set(v_plot,'{stage}','"mature"');
+      end if;
+      v_plot := jsonb_set(v_plot,'{growth}',to_jsonb(v_growth));
+      v_plot := jsonb_set(v_plot,'{water}',to_jsonb(v_water_level));
+      v_plot := jsonb_set(v_plot,'{weeds}',to_jsonb(v_weeds));
+      v_plots := jsonb_set(v_plots,array[v_roots::text],v_plot,false);
+    end if;
+  end loop;
+  v_state := jsonb_set(v_state,'{plots}',v_plots,true);
+  v_state := jsonb_set(v_state,'{lastSimulatedAt}',to_jsonb(now()),true);
   v_plot := v_plots->p_plot_id;
   if v_plot is null then
     raise exception using errcode = '22023', message = 'invalid_plot';
@@ -127,6 +162,8 @@ begin
   v_plots := jsonb_set(v_plots, array[p_plot_id::text], v_plot, false);
   v_state := jsonb_set(v_state,'{plots}',v_plots,true);
   v_xp := coalesce((v_state->>'xp')::bigint,0) + v_gain;
+  v_total_xp := coalesce((v_state->>'totalXp')::bigint,0) + v_gain;
+  v_state := jsonb_set(v_state,'{totalXp}',to_jsonb(v_total_xp),true);
   v_level := greatest(1,coalesce((v_state->>'level')::integer,1));
   v_new_xp := v_xp;
   v_new_level := v_level;
@@ -144,7 +181,7 @@ begin
   where user_id=p_user_id
   returning revision into v_revision;
   update public.player_profiles
-  set xp=coalesce((select sum((e.result->>'xp_gain')::bigint) from public.game_action_events e where e.user_id=p_user_id),0)+v_gain,
+  set xp=v_total_xp,
       level=v_new_level
   where user_id=p_user_id;
 
