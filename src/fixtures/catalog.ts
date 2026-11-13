@@ -64,7 +64,7 @@ export interface QuestTemplate {
   reward: string
 }
 
-/** Quest templates — shown as "coming with accounts"; no progress is faked. */
+/** Public quest definitions; player progress and claims are computed by the server. */
 export const QUEST_TEMPLATES: QuestTemplate[] = [
   { id: 'd-plant', title: 'Morning Rows', cadence: 'daily', goal: 'Plant 4 plots of cassava', reward: '60 XP · 2 stem bundles' },
   { id: 'd-water', title: 'Borehole Run', cadence: 'daily', goal: 'Water 6 growing plots', reward: '40 XP' },
