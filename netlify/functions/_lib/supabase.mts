@@ -5,11 +5,11 @@ export function json(data: unknown, status = 200): Response {
 }
 export function methodNotAllowed(allowed: string) { return json({ error: 'method_not_allowed', allowed }, 405) }
 export function readBearer(request: Request): string | null {
-  const match = (request.headers.get('authorization') || '').match(/^Bearer\\s+(.+)$/i)
+  const match = (request.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)
   return match?.[1]?.trim() || null
 }
 export function supabaseConfig() {
-  const url = process.env.SUPABASE_URL?.replace(/\\/$/, '')
+  const url = process.env.SUPABASE_URL?.replace(/\/$/, '')
   const anonKey = process.env.SUPABASE_ANON_KEY
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   return url && anonKey && serviceKey ? { url, anonKey, serviceKey } : null
