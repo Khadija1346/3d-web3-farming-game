@@ -38,3 +38,11 @@ Apply `supabase/migrations/0002_authoritative_farming_actions.sql` in the Supaba
 Request JSON contains only `action`, `plotId`, `idempotencyKey`, and optional `expectedRevision`. The server derives the player ID from the verified bearer token. XP, level, stems, water usage, root yield, plot transitions, and revision are computed in PostgreSQL. Repeated idempotency keys return the original result. Stale revisions return HTTP 409.
 
 This is a backend foundation, not yet the live gameplay save loop. The 3D client is not wired to submit these commands, crop growth/maturity is still simulated locally, and factory/warehouse/market actions are not yet server-authoritative. Do not describe progress as cloud-saved until the client migration and server-side crop/factory simulation are complete. Apply migration 0002 only after reviewing it in Supabase; this branch work does not run it.
+
+
+## 3D gameplay cloud connection (partial milestone)
+When a valid Supabase session is present, `src/pages/Play.tsx` loads the signed-in player's saved state and configures `GameStore` to send till, plant, watering-can, weed, and harvest commands to `/.netlify/functions/farming-action`. The browser no longer advances crop growth in signed-in cloud mode; the SQL function advances crops from server elapsed time and derives XP, level, water use, stems and harvest yield. Each successful command returns a canonical state snapshot and revision which the client applies.
+
+Without a signed-in account the game remains a local preview. In signed-in mode the current cloud milestone covers the five field actions only. Tanker/rain watering, factory processing, warehouse deposits, market sales, stem purchases, day/weather, and vehicle state are not yet cloud-backed; the UI labels factory and market as preview-only. No real-money or $GARRI reward path is enabled. The browser generates an idempotency key per command and submits only the action, plot ID, and expected revision.
+
+Before this feature can run in a deployed environment, review and apply migrations 0001 and 0002 in the intended Supabase project, confirm the three server-side Netlify environment variables are configured, and deploy the Netlify functions. This branch work does not apply migrations or deploy.
