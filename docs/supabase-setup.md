@@ -1,30 +1,50 @@
 # Supabase setup for GARRIVERSE
 
-This guide prepares the hosted PostgreSQL project. The schema is versioned in this repository; applying it does not by itself turn on game persistence or authentication.
+The Supabase project stores verified player accounts, cloud game state, action history and leaderboard data. The repository contains the database migrations and Netlify Functions; applying the migrations and configuring the hosting environment are separate launch steps.
 
-## 1. Create the project
-1. Open https://supabase.com/dashboard and sign in.
-2. Create a new project named `garriverse`.
-3. Choose a strong database password and store it in your password manager. Do not send it in chat or commit it to GitHub.
-4. Select a nearby region with good latency for your expected players.
-5. Wait until the database is ready.
+## 1. Create or select the Supabase project
 
-## 2. Apply the schema
-1. In the Supabase dashboard, open **SQL Editor**.
-2. Open `supabase/migrations/0001_initial_schema.sql` from this repository.
-3. Paste its contents into a new SQL query and run it.
-4. Confirm that `player_profiles`, `player_game_states`, `game_action_events`, and `player_leaderboard` exist.
+1. Open https://supabase.com/dashboard.
+2. Select the approved GARRIVERSE project.
+3. In **Project Settings → API**, locate the Project URL, anon/public key and service-role key.
+4. Keep the service-role key private in a password manager. Never paste it into chat, screenshots or GitHub.
 
-The migration enables row-level security. It intentionally gives browser clients no write policies for game state or action events. The auth trigger creates an initial profile and empty game state when a Supabase Auth user is created.
+## 2. Apply migrations in order
 
-## 3. Keep credentials private
-The Netlify Functions will eventually need a server-side Supabase credential. Add it only in the hosting provider's encrypted environment-variable settings:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+Open **SQL Editor** and run the complete contents of these files in numeric order:
 
-Never use a `VITE_...` prefix for these values. Never put the service-role key in frontend code, GitHub, screenshots, or chat. The service-role key bypasses RLS and must only be used by trusted server functions after verifying the player's identity.
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_authoritative_farming_actions.sql`
+3. `supabase/migrations/0003_authoritative_factory_warehouse_market.sql`
+4. `supabase/migrations/0004_authoritative_tanker_actions.sql`
 
-## 4. Current implementation boundary
-This migration creates the database structure only. It does not yet implement register/login endpoints, session verification, game-action transactions, saved game-state reads/writes, or a live leaderboard endpoint. Do not advertise those features as live until the server functions are implemented and tested.
+Confirm that `player_profiles`, `player_game_states`, `game_action_events` and `player_leaderboard` exist. The RPC functions must be executable by `service_role` only. Browser clients must not receive direct write policies for player state or action events.
 
-Real $GARRI rewards and withdrawals remain disabled. XP, inventory, and game progress are not token balances.
+## 3. Configure Netlify environment variables
+
+In the correct Netlify site, open **Site configuration → Environment variables** and add:
+
+- `SUPABASE_URL` — Supabase project URL.
+- `SUPABASE_ANON_KEY` — Supabase anon/public key.
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only service-role key.
+
+Do not add a `VITE_` prefix to any of these values. The service-role key bypasses RLS and must never enter the browser bundle.
+
+After setting variables, trigger a new deploy so Netlify Functions receive them.
+
+## 4. Verify the deployed backend
+
+Open `/.netlify/functions/health` on the deployed site. A `ready` status means the API can reach Supabase Auth, the game-state table, leaderboard view and the three authoritative gameplay RPCs. A degraded/not-configured result must be resolved before announcing cloud gameplay as live.
+
+Then create a test account and verify:
+- Register, sign in, sign out and sign in again.
+- Game state loads for the signed-in player.
+- Till, plant, water, weed, harvest and watering-can refill persist.
+- Factory stages cannot be completed early; completed batches produce two in-game bags.
+- Warehouse deposit, market sale and stem purchase persist.
+- Tanker watering and tanker refill persist.
+- Leaderboard displays only actual registered players.
+
+## 5. Security boundary
+
+The in-game naira, XP, roots, stems and garri inventory have no cash or token value. Real $GARRI transfers, reward claims and withdrawals are not enabled by these migrations. They require a separately approved payout design, audited contract, eligibility rules, custody/authority model, monitoring and incident controls.
