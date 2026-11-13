@@ -58,7 +58,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       if (!active) return
       if (state?.state && Array.isArray(state.state.plots)) store.hydrateCloudState(state.state, state.revision)
       store.setCloudReady(true, state?.revision ?? 0)
-      setCloudStatus('Cloud save connected · farming, factory, warehouse and market are server-backed')
+      setCloudStatus('Cloud save connected · farming, factory, warehouse, market and tanker are server-backed')
     }).catch(() => {
       if (!active) return
       store.setCloudReady(false)
