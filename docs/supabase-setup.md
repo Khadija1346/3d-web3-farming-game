@@ -45,6 +45,7 @@ Then create a test account and verify:
 - Warehouse deposit, market sale and stem purchase persist.
 - Tanker watering and tanker refill persist.
 - Leaderboard displays only actual registered players.
+- Daily/weekly quest progress is derived from server action events; claims award XP/stems once and reject incomplete or expired quests.
 
 ## 5. Security boundary
 
