@@ -75,6 +75,10 @@ export class GameStore {
   private dirty = false
   private emitTimer = 0
   private weatherTimer = 70
+  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
+  private cloudReady = false
+  private cloudRevision = 0
+  private cloudPending = new Set<string>()
 
   constructor(plotCount: number) {
     this.s = {
@@ -100,6 +104,57 @@ export class GameStore {
       stats: { harvested: 0, bagsMade: 0, plotsTilled: 0 },
     }
     this.published = this.s
+  }
+
+  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
+    this.cloudHandler = handler
+    this.cloudReady = ready
+  }
+
+  setCloudReady(ready: boolean, revision = this.cloudRevision) {
+    this.cloudReady = ready
+    this.cloudRevision = revision
+  }
+
+  hydrateCloudState(value: Record<string, unknown>, revision: number) {
+    const plots = Array.isArray(value.plots) ? value.plots as Plot[] : null
+    if (!plots || plots.length !== this.s.plots.length || plots.some((p, i) => p.id !== i || !['wild','tilled','planted','mature'].includes(p.stage))) {
+      throw new Error('invalid_cloud_game_state')
+    }
+    const numeric = (key: string, fallback: number) => typeof value[key] === 'number' && Number.isFinite(value[key]) ? value[key] as number : fallback
+    this.s = {
+      ...this.s,
+      plots,
+      stems: numeric('stems', this.s.stems),
+      roots: numeric('roots', this.s.roots),
+      garriCarried: numeric('garriCarried', this.s.garriCarried),
+      garriStored: numeric('garriStored', this.s.garriStored),
+      naira: numeric('naira', this.s.naira),
+      waterCan: numeric('waterCan', this.s.waterCan),
+      tankerWater: numeric('tankerWater', this.s.tankerWater),
+      xp: numeric('xp', this.s.xp),
+      level: numeric('level', this.s.level),
+      stats: (value.stats && typeof value.stats === 'object' ? value.stats : this.s.stats) as Snapshot['stats'],
+    }
+    this.cloudRevision = revision
+    this.emit()
+  }
+
+  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', id: number) {
+    if (!this.cloudHandler) return false
+    if (!this.cloudReady) { this.toast('Cloud save is still connecting. Please wait.', 'warn'); return true }
+    const key = action + ':' + id
+    if (this.cloudPending.has(key)) return true
+    this.cloudPending.add(key)
+    const handler = this.cloudHandler
+    void handler(action, id, this.cloudRevision).then(result => {
+      if (this.cloudHandler !== handler) return
+      this.hydrateCloudState(result.state, result.revision)
+      this.toast('Farming progress saved to your account', 'info')
+    }).catch(error => {
+      this.toast(error instanceof Error ? error.message.replaceAll('_',' ') : 'Cloud action failed. Try again.', 'warn')
+    }).finally(() => this.cloudPending.delete(key))
+    return true
   }
 
   // ---- subscription (useSyncExternalStore) ----
@@ -149,6 +204,7 @@ export class GameStore {
 
   // ---- farming commands ----
   till(id: number, byTractor = false) {
+    if (this.cloudAction('till', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'wild') return false
     this.updatePlot(id, { stage: 'tilled', growth: 0, water: 0, weeds: 0 })
@@ -158,6 +214,7 @@ export class GameStore {
   }
 
   plant(id: number) {
+    if (this.cloudAction('plant', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'tilled') return false
     if (this.s.stems <= 0) {
@@ -171,6 +228,10 @@ export class GameStore {
   }
 
   water(id: number, source: 'can' | 'tanker' | 'rain' = 'can') {
+    if (this.cloudHandler) {
+      if (source !== 'can') { this.toast('Cloud accounts currently support watering-can actions only.', 'warn'); return false }
+      return this.cloudAction('water', id)
+    }
     const p = this.s.plots[id]
     if (!p || p.stage !== 'planted' || p.water > 0.85) return false
     if (source === 'can') {
@@ -193,6 +254,7 @@ export class GameStore {
   }
 
   weed(id: number) {
+    if (this.cloudAction('weed', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'planted' || p.weeds < 0.25) return false
     this.updatePlot(id, { weeds: 0 })
@@ -201,6 +263,7 @@ export class GameStore {
   }
 
   harvest(id: number) {
+    if (this.cloudAction('harvest', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'mature') return false
     const roots = CROP.rootsMin + Math.floor(Math.random() * (CROP.rootsMax - CROP.rootsMin + 1))
@@ -309,7 +372,7 @@ export class GameStore {
     // crops
     let changed = false
     const matured: number[] = []
-    const plots = s.plots.map((p) => {
+    const plots = this.cloudHandler ? s.plots : s.plots.map((p) => {
       if (p.stage !== 'planted') return p
       changed = true
       const water = weather === 'rain' ? Math.min(1, p.water + dt / 6) : Math.max(0, p.water - dt / CROP.waterDrainSeconds)
