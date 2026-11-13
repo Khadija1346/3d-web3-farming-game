@@ -1,41 +1,27 @@
-# Backend foundation — API contract
+# GARRIVERSE backend API
 
-This document defines the first server boundary for GARRIVERSE. It is a contract, not a claim that persistence or authentication is already live.
+Netlify server-side environment variables required:
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
 
-## Runtime
-- Netlify Functions live under `netlify/functions/`.
-- Health check: `GET /.netlify/functions/health`.
-- Database credentials must remain server-side and must never use `VITE_*` variables.
-- Player-specific responses must use `Cache-Control: no-store`.
-- Never trust client-supplied XP, balances, crop maturity, factory progress, or sale prices.
+Never use VITE_ prefixes for secrets, commit credentials, or paste them into chat. Rotate any credential previously shared in a chat.
 
-## Health response
-The endpoint reports whether `DATABASE_URL` is present. A configured variable is not proof of a successful database connection; the endpoint therefore reports `configured_not_connection_tested`.
-
-## Planned player API
+## Implemented routes
 | Method | Route | Purpose |
 | --- | --- | --- |
-| POST | `/.netlify/functions/auth-register` | Create an account after choosing an auth provider |
-| POST | `/.netlify/functions/auth-login` | Start a secure session |
-| POST | `/.netlify/functions/game-action` | Execute a validated farming/factory action |
-| GET | `/.netlify/functions/game-state` | Read the authenticated player's saved state |
-| GET | `/.netlify/functions/leaderboard` | Read server-calculated rankings |
+| GET | /.netlify/functions/health | Configuration presence only |
+| POST | /.netlify/functions/auth-register | Supabase email registration |
+| POST | /.netlify/functions/auth-login | Email/password sign-in |
+| GET | /.netlify/functions/auth-me | Verify bearer access token |
+| POST | /.netlify/functions/auth-logout | End Supabase session |
+| GET | /.netlify/functions/game-state | Read authenticated player's saved state |
+| GET | /.netlify/functions/leaderboard?limit=20 | Public leaderboard, limit 1–50 |
 
-These routes are not available until implementation, persistence, and tests are complete.
+Registration JSON: { "email": "player@example.com", "password": "minimum-8-characters", "displayName": "Farmer" }
+Login JSON: { "email": "player@example.com", "password": "your-password" }
 
-## Server-authoritative action rules
-1. Resolve the player from a verified server session, never from a request body player ID.
-2. Validate action type, plot/job ownership, current state, resource requirements, and cooldowns on the server.
-3. Apply state changes and append the audit event in one database transaction.
-4. Use an idempotency key for retryable commands.
-5. Return committed state/version; clients may animate optimistically but must reconcile to the server result.
-6. Keep XP/in-game items separate from any future $GARRI entitlement ledger.
-7. Keep token payouts and withdrawals disabled until the GARRI team approves the contract, tokenomics, and eligibility rules.
+Use Authorization: Bearer <access_token> for authenticated endpoints. Supabase email-confirmation settings determine whether registration returns a session immediately.
 
-## Configuration still required
-- PostgreSQL database and private `DATABASE_URL`.
-- Database adapter and migration strategy.
-- Production-grade authentication/session provider.
-- Approved OAuth credentials for Google or X sign-in.
-
-Never commit credentials.
+## Important limitation
+State reads are implemented. State writes and farming actions remain deliberately disabled until transactional, server-authoritative game rules are implemented. Current game play remains a local preview and is not cloud-saved. Never send browser-generated XP, balances, harvests, factory progress, or sale prices to a write endpoint. Real $GARRI payouts and withdrawals remain disabled.
