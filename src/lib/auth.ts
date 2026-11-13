@@ -73,12 +73,12 @@ export async function fetchGameState() {
     headers: { Authorization: 'Bearer ' + session.access_token },
   })
 }
-export async function submitFarmingAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, expectedRevision: number) {
+export async function submitFarmingAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, expectedRevision: number, idempotencyKey = crypto.randomUUID()) {
   const session = getSession()
   if (!session) throw new Error('sign_in_required')
   return request<{ state: Record<string, unknown>; revision: number; xp_gain: number; level: number; duplicate: boolean }>('farming-action', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + session.access_token },
-    body: JSON.stringify({ action, plotId, idempotencyKey: crypto.randomUUID(), expectedRevision }),
+    body: JSON.stringify({ action, plotId, idempotencyKey, expectedRevision }),
   })
 }
