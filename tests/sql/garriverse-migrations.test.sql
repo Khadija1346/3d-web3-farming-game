@@ -156,7 +156,43 @@ begin
   where user_id='11111111-1111-4111-8111-111111111111';
   if v_xp<>29 then raise exception 'economy XP sync mismatch: %',v_xp; end if;
 
+
+  -- Tanker watering and river-pump refills are server-authoritative too.
+  update public.player_game_states
+  set state=jsonb_set(
+    jsonb_set(state,'{tankerWater}','80'::jsonb,true),
+    '{plots,0,water}','0.2'::jsonb,true
+  )
+  where user_id='11111111-1111-4111-8111-111111111111';
+
+  v_result:=public.apply_garriverse_utility_action(
+    '11111111-1111-4111-8111-111111111111','water_tanker',0,'ci-tanker-water-01',9
+  );
+  if (v_result#>>'{state,tankerWater}')::integer<>70
+     or (v_result#>>'{state,plots,0,water}')::numeric<>1 then
+    raise exception 'tanker did not water the crop and consume ten units';
+  end if;
+  if (v_result->>'revision')::bigint<>10 then raise exception 'tanker water revision mismatch'; end if;
+
+  v_result:=public.apply_garriverse_utility_action(
+    '11111111-1111-4111-8111-111111111111','refill_tanker',null,'ci-tanker-refill-01',10
+  );
+  if (v_result#>>'{state,tankerWater}')::integer<>100 then raise exception 'tanker did not refill'; end if;
+  if (v_result->>'revision')::bigint<>11 then raise exception 'tanker refill revision mismatch'; end if;
+
+  v_result:=public.apply_garriverse_utility_action(
+    '11111111-1111-4111-8111-111111111111','refill_tanker',null,'ci-tanker-refill-01',10
+  );
+  if coalesce((v_result->>'duplicate')::boolean,false) is not true
+     or (v_result->>'revision')::bigint<>11 then
+    raise exception 'tanker refill retry was not idempotent';
+  end if;
+
+  select xp into v_xp from public.player_profiles
+  where user_id='11111111-1111-4111-8111-111111111111';
+  if v_xp<>32 then raise exception 'tanker XP sync mismatch: %',v_xp; end if;
+
 end
-$$;
+$;
 
 select 'GARRIVERSE SQL migration integration tests passed' as result;
