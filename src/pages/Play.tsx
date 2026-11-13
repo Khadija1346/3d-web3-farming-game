@@ -5,7 +5,7 @@ import { FactoryPanel, MarketPanel, WarehousePanel } from '../components/Panels'
 import { GameStore, xpForLevel } from '../game/state'
 import { GarriWorld, PLOT_COUNT } from '../game/World'
 import { postToHost } from '../embed/bridge'
-import { fetchGameState, getSession, submitFarmingAction } from '../lib/auth'
+import { fetchGameState, getSession, submitEconomyAction, submitFarmingAction, type EconomyAction } from '../lib/auth'
 
 const fmtTime = (t: number) => {
   const h = Math.floor(t)
@@ -32,9 +32,12 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       return
     }
     let active = true
-    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId: number, revision: number, idempotencyKey: string) => {
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | EconomyAction, plotId: number, revision: number, idempotencyKey: string) => {
       try {
-        const result = await submitFarmingAction(action, plotId, revision, idempotencyKey)
+        const farmingActions = ['till', 'plant', 'water', 'weed', 'harvest', 'refill_can']
+        const result = farmingActions.includes(action)
+          ? await submitFarmingAction(action as 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId, revision, idempotencyKey)
+          : await submitEconomyAction(action as EconomyAction, revision, idempotencyKey)
         return { state: result.state, revision: result.revision }
       } catch (error) {
         if (error instanceof Error && error.message === 'revision_conflict') {
@@ -52,7 +55,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       if (!active) return
       if (state?.state && Array.isArray(state.state.plots)) store.hydrateCloudState(state.state, state.revision)
       store.setCloudReady(true, state?.revision ?? 0)
-      setCloudStatus('Cloud farming connected · factory and market remain preview-only')
+      setCloudStatus('Cloud save connected · farming, factory, warehouse and market are server-backed')
     }).catch(() => {
       if (!active) return
       store.setCloudReady(false)
@@ -224,7 +227,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
                 ? 'Left stick to move · drag the screen to look · pinch to zoom · tap the action button to interact.'
                 : 'WASD to move · Shift to run · drag to look · scroll to zoom · E to interact · F to drive the tractor or water tanker.'}
             </p>
-            <p className="fine">This preview keeps progress in this tab only. Saved progress, accounts and rewards arrive next.</p>
+            <p className="fine">{getSession() ? 'Your farming and in-game economy actions are saved to your account.' : 'This preview keeps progress in this tab only. Sign in to save farming and economy progress.'} Real $GARRI rewards are not enabled.</p>
             <button className="btn btn-primary btn-block" onClick={() => setHelp(false)}>
               Start farming
             </button>
