@@ -75,6 +75,11 @@ begin
 end
 $$;
 
+do $
+declare
+  v_result jsonb;
+  v_xp bigint;
+begin
   -- Prepare an owned batch for server-side factory lifecycle tests.
   update public.player_game_states
   set state=jsonb_set(state,'{roots}','5'::jsonb,true)
@@ -142,5 +147,8 @@ $$;
   select xp into v_xp from public.player_profiles
   where user_id='11111111-1111-4111-8111-111111111111';
   if v_xp<>29 then raise exception 'economy XP sync mismatch: %',v_xp; end if;
+
+end
+$;
 
 select 'GARRIVERSE SQL migration integration tests passed' as result;
