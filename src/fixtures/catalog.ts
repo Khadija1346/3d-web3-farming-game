@@ -85,6 +85,7 @@ export const INTEGRATIONS: Integration[] = [
   { name: 'Email/password accounts', state: 'pending', note: 'Status updates automatically after the deployed Supabase Auth health check.' },
   { name: 'Cloud saves & leaderboard', state: 'pending', note: 'Status updates automatically when the deployed API can reach the migrated database.' },
   { name: 'Server-backed farming, factory, warehouse, market & tanker', state: 'pending', note: 'Status updates automatically after all authoritative gameplay RPCs are present.' },
+  { name: 'Server-verified quests', state: 'pending', note: 'Status updates automatically after the quest ledger and claim RPCs are available.' },
   { name: 'Google / X sign-in', state: 'pending', note: 'Requires approved OAuth client configuration and callback URLs.' },
   { name: 'Solana wallet sign-in & token balance', state: 'pending', note: 'Requires the approved wallet sign-in flow and official $GARRI mint address.' },
   { name: 'NFT gallery', state: 'pending', note: 'Requires official collection addresses and a supported Solana asset data source.' },
