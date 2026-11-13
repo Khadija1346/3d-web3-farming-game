@@ -52,5 +52,6 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0003_authoritative_factory_warehouse_market.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0004_authoritative_tanker_actions.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/0005_server_quests_and_claims.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/0005_server_quests_and_claims.sql
       - name: Test authoritative farming RPC
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/garriverse-migrations.test.sql
