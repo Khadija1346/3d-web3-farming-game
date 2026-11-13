@@ -149,6 +149,6 @@ begin
   if v_xp<>29 then raise exception 'economy XP sync mismatch: %',v_xp; end if;
 
 end
-$;
+$$;
 
 select 'GARRIVERSE SQL migration integration tests passed' as result;
