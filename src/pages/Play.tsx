@@ -5,7 +5,7 @@ import { FactoryPanel, MarketPanel, WarehousePanel } from '../components/Panels'
 import { GameStore, xpForLevel } from '../game/state'
 import { GarriWorld, PLOT_COUNT } from '../game/World'
 import { postToHost } from '../embed/bridge'
-import { fetchGameState, getSession, submitEconomyAction, submitFarmingAction, type EconomyAction } from '../lib/auth'
+import { fetchGameState, getSession, submitEconomyAction, submitFarmingAction, submitUtilityAction, type EconomyAction, type UtilityAction } from '../lib/auth'
 
 const fmtTime = (t: number) => {
   const h = Math.floor(t)
@@ -32,12 +32,15 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       return
     }
     let active = true
-    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | EconomyAction, plotId: number, revision: number, idempotencyKey: string) => {
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | EconomyAction | UtilityAction, plotId: number, revision: number, idempotencyKey: string) => {
       try {
         const farmingActions = ['till', 'plant', 'water', 'weed', 'harvest', 'refill_can']
+        const economyActions = ['factory_start', 'factory_run_stage', 'factory_complete_stage', 'warehouse_deposit', 'market_sell', 'market_buy_stems']
         const result = farmingActions.includes(action)
           ? await submitFarmingAction(action as 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId, revision, idempotencyKey)
-          : await submitEconomyAction(action as EconomyAction, revision, idempotencyKey)
+          : economyActions.includes(action)
+            ? await submitEconomyAction(action as EconomyAction, revision, idempotencyKey)
+            : await submitUtilityAction(action as UtilityAction, plotId, revision, idempotencyKey)
         return { state: result.state, revision: result.revision }
       } catch (error) {
         if (error instanceof Error && error.message === 'revision_conflict') {
