@@ -32,8 +32,8 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       return
     }
     let active = true
-    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => {
-      const result = await submitFarmingAction(action, plotId, revision)
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => {
+      const result = await submitFarmingAction(action, plotId, revision, idempotencyKey)
       return { state: result.state, revision: result.revision }
     }
     store.setCloudCommandHandler(handler, false)
