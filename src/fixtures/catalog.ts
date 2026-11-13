@@ -68,8 +68,8 @@ export interface QuestTemplate {
 export const QUEST_TEMPLATES: QuestTemplate[] = [
   { id: 'd-plant', title: 'Morning Rows', cadence: 'daily', goal: 'Plant 4 plots of cassava', reward: '60 XP · 2 stem bundles' },
   { id: 'd-water', title: 'Borehole Run', cadence: 'daily', goal: 'Water 6 growing plots', reward: '40 XP' },
-  { id: 'w-garri', title: 'Market Day', cadence: 'weekly', goal: 'Package 10 bags of garri', reward: '400 XP · Market badge' },
-  { id: 's-tractor', title: 'Mechanised Farmer', cadence: 'special', goal: 'Till 20 plots with the tractor', reward: 'Achievement' },
+  { id: 'w-garri', title: 'Market Day', cadence: 'weekly', goal: 'Package 10 bags of garri', reward: '400 XP' },
+  { id: 's-till', title: 'Prepared Farmer', cadence: 'special', goal: 'Till 20 plots', reward: '100 XP' },
 ]
 
 export type IntegrationState = 'live' | 'preview' | 'pending'
