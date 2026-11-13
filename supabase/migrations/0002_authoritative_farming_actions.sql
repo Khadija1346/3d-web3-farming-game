@@ -30,7 +30,7 @@ declare
   v_needed integer;
   v_roots_yield integer;
 begin
-  if p_user_id is null or p_action_type not in ('till','plant','water','weed','harvest') then
+  if p_user_id is null or p_action_type is null or p_action_type not in ('till','plant','water','weed','harvest') then
     raise exception using errcode = '22023', message = 'invalid_action';
   end if;
   if p_idempotency_key is null or length(p_idempotency_key) < 8 or length(p_idempotency_key) > 128 then
