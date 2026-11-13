@@ -1,48 +1,61 @@
 # GARRIVERSE backend API
 
-Netlify server-side environment variables required:
-- SUPABASE_URL
-- SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY (required for leaderboard and database reads)
+Netlify server-side environment variables:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server only; never expose with a VITE_ prefix)
 
-Never use VITE_ prefixes for secrets, commit credentials, or paste them into chat. Rotate any credential previously shared in a chat.
+Never commit credentials or paste them into chat. Rotate any credential previously shared in a chat.
 
-## Implemented routes
-| Method | Route | Purpose |
-| --- | --- | --- |
-| GET | /.netlify/functions/health | Reports configured credentials (not DB reachability) |
-| POST | /.netlify/functions/auth-register | Supabase email registration |
-| POST | /.netlify/functions/auth-login | Email/password sign-in |
-| GET | /.netlify/functions/auth-me | Verify bearer access token |
-| POST | /.netlify/functions/auth-logout | End Supabase session |
-| GET | /.netlify/functions/game-state | Read authenticated player's saved state |
-| GET | /.netlify/functions/leaderboard?limit=20 | Public leaderboard, limit 1–50 |
-
-The landing page now includes farmer registration/sign-in. The community hub reads the public leaderboard from the backend. The browser stores the returned Supabase session locally; do not expose the service-role key to the browser.
-
-Registration JSON: { "email": "player@example.com", "password": "minimum-8-characters", "displayName": "Farmer" }
-Login JSON: { "email": "player@example.com", "password": "your-password" }
-
-Use Authorization: Bearer <access_token> for authenticated endpoints. Supabase email-confirmation settings determine whether registration returns a session immediately.
-
-## Important limitation
-State reads are implemented. State writes and farming actions remain deliberately disabled until transactional, server-authoritative game rules are implemented. Current gameplay still runs locally and is not cloud-saved; XP and resources do not yet sync to the profile or leaderboard. Never send browser-generated XP, balances, harvests, factory progress, or sale prices to a write endpoint. Real $GARRI payouts and withdrawals remain disabled.
-
-## Authoritative farming action foundation (migration 0002)
-Apply `supabase/migrations/0002_authoritative_farming_actions.sql` in the Supabase SQL Editor before enabling this route. The migration grants execution only to `service_role`; browser clients cannot call the RPC directly.
+## Routes
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| POST | /.netlify/functions/farming-action | Authenticated, server-validated till/plant/water/weed/harvest command |
+| GET | `/.netlify/functions/health` | Reports whether required environment variables exist; it does not prove database reachability |
+| POST | `/.netlify/functions/auth-register` | Supabase email registration |
+| POST | `/.netlify/functions/auth-login` | Email/password sign-in |
+| GET | `/.netlify/functions/auth-me` | Verify bearer access token |
+| POST | `/.netlify/functions/auth-logout` | End Supabase session |
+| GET | `/.netlify/functions/game-state` | Read the authenticated player's saved state |
+| GET | `/.netlify/functions/leaderboard?limit=20` | Public leaderboard, limit 1–50 |
+| POST | `/.netlify/functions/farming-action` | Server-authoritative field actions |
+| POST | `/.netlify/functions/economy-action` | Server-authoritative factory, warehouse and in-game market actions |
 
-Request JSON contains only `action`, `plotId`, `idempotencyKey`, and optional `expectedRevision`. The server derives the player ID from the verified bearer token. XP, level, stems, water usage, root yield, plot transitions, and revision are computed in PostgreSQL. Repeated idempotency keys return the original result. Stale revisions return HTTP 409.
+Use `Authorization: Bearer <access_token>` for authenticated endpoints. The server derives the player ID from the verified Supabase token; clients cannot submit another player's ID.
 
-This is a backend foundation, not yet the live gameplay save loop. The 3D client is not wired to submit these commands, crop growth/maturity is still simulated locally, and factory/warehouse/market actions are not yet server-authoritative. Do not describe progress as cloud-saved until the client migration and server-side crop/factory simulation are complete. Apply migration 0002 only after reviewing it in Supabase; this branch work does not run it.
+Registration JSON: `{ "email": "player@example.com", "password": "minimum-8-characters", "displayName": "Farmer" }`
 
+Login JSON: `{ "email": "player@example.com", "password": "your-password" }`
 
-## 3D gameplay cloud connection (partial milestone)
-When a valid Supabase session is present, `src/pages/Play.tsx` loads the signed-in player's saved state and configures `GameStore` to send till, plant, watering-can, refill-can, weed, and harvest commands to `/.netlify/functions/farming-action`. The browser no longer advances crop growth in signed-in cloud mode; the SQL function advances crops from server elapsed time and derives XP, level, water use, stems and harvest yield. Each successful command returns a canonical state snapshot and revision which the client applies.
+## Server-authoritative gameplay
 
-Without a signed-in account the game remains a local preview. In signed-in mode the current cloud milestone covers the five field actions only. Tanker/rain watering, factory processing, warehouse deposits, market sales, stem purchases, day/weather, and vehicle state are not yet cloud-backed; the UI labels factory and market as preview-only. No real-money or $GARRI reward path is enabled. The browser generates an idempotency key per command and submits only the action, plot ID, and expected revision.
+Apply migrations in numeric order:
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_authoritative_farming_actions.sql`
+3. `supabase/migrations/0003_authoritative_factory_warehouse_market.sql`
 
-Before this feature can run in a deployed environment, review and apply migrations 0001 and 0002 in the intended Supabase project, confirm the three server-side Netlify environment variables are configured, and deploy the Netlify functions. This branch work does not apply migrations or deploy.
+Migration 0001 creates player profiles, game state, idempotent action events, the auth-user trigger and public leaderboard view. Browser clients receive no direct write policies for game state or action events.
+
+Migration 0002 owns field actions: `till`, `plant`, `water`, `weed`, `harvest`, and `refill_can`. Crop growth and harvest eligibility/yield are calculated with server time and database rules.
+
+Migration 0003 owns:
+- `factory_start`: consumes five harvested roots and opens a batch.
+- `factory_run_stage`: starts the current processing stage on the server.
+- `factory_complete_stage`: rejects early completion and advances only after the server-side stage duration has elapsed. The eighth stage packages two bags.
+- `warehouse_deposit`: moves all carried bags into stored inventory.
+- `market_sell`: sells one stored bag for 1,200 in-game naira.
+- `market_buy_stems`: spends 150 in-game naira for four cassava stems.
+
+Both action endpoints accept only an action, idempotency key and expected revision (the field endpoint additionally accepts a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is granted to `service_role` only.
+
+The 3D client now loads the signed-in player's cloud state and routes field, factory, warehouse and market actions to the server. Factory stage progress shown in the UI is a display estimate; the server checks elapsed time before accepting stage completion. Unsigned-in gameplay remains a local preview. Vehicle/tanker state, weather/day simulation, quests, wallet features, NFT features and real token rewards are not cloud-backed.
+
+## Economy and token safety
+
+The naira balance and bag prices are fictional in-game values with no cash value. This implementation does not transfer, stake, mint, or pay real $GARRI; withdrawals and token rewards remain disabled pending explicit GARRI team approval, audited contracts, eligibility rules and operational safeguards.
+
+## Validation and launch requirements
+
+GitHub Actions validates the frontend build, bundles Netlify Functions, applies migrations 0001–0003 to an ephemeral PostgreSQL test database, and exercises the authoritative farming/economy RPCs including idempotency, revision conflicts, inventory and XP updates.
+
+CI tests do not apply migrations to the user's Supabase project and do not verify Netlify environment variables. Before enabling the deployed game, apply migrations 0001–0003 to the intended Supabase project, configure the three server-side Netlify variables, deploy the Netlify functions, and run an end-to-end test with a test account. Never apply migrations to production without explicit approval and a backup/rollback plan.
