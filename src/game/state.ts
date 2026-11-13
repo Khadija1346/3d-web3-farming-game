@@ -31,6 +31,7 @@ export interface FactoryJob {
   stageIndex: number
   running: boolean
   progress: number // 0..1 for the current stage
+  startedAt?: string | null
 }
 
 export interface Toast {
@@ -75,6 +76,11 @@ export class GameStore {
   private dirty = false
   private emitTimer = 0
   private weatherTimer = 70
+  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
+  private cloudReady = false
+  private cloudRevision = 0
+  private cloudPending = new Set<string>()
+  private cloudKeys = new Map<string, string>()
 
   constructor(plotCount: number) {
     this.s = {
@@ -100,6 +106,61 @@ export class GameStore {
       stats: { harvested: 0, bagsMade: 0, plotsTilled: 0 },
     }
     this.published = this.s
+  }
+
+  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
+    this.cloudHandler = handler
+    this.cloudReady = ready
+  }
+
+  setCloudReady(ready: boolean, revision = this.cloudRevision) {
+    this.cloudReady = ready
+    this.cloudRevision = revision
+  }
+
+  hydrateCloudState(value: Record<string, unknown>, revision: number) {
+    const plots = Array.isArray(value.plots) ? value.plots as Plot[] : null
+    if (!plots || plots.length !== this.s.plots.length || plots.some((p, i) => p.id !== i || !['wild','tilled','planted','mature'].includes(p.stage))) {
+      throw new Error('invalid_cloud_game_state')
+    }
+    const numeric = (key: string, fallback: number) => typeof value[key] === 'number' && Number.isFinite(value[key]) ? value[key] as number : fallback
+    this.s = {
+      ...this.s,
+      plots,
+      stems: numeric('stems', this.s.stems),
+      roots: numeric('roots', this.s.roots),
+      garriCarried: numeric('garriCarried', this.s.garriCarried),
+      garriStored: numeric('garriStored', this.s.garriStored),
+      naira: numeric('naira', this.s.naira),
+      waterCan: numeric('waterCan', this.s.waterCan),
+      tankerWater: numeric('tankerWater', this.s.tankerWater),
+      xp: numeric('xp', this.s.xp),
+      level: numeric('level', this.s.level),
+      factory: value.factory && typeof value.factory === 'object' ? value.factory as FactoryJob : null,
+      stats: (value.stats && typeof value.stats === 'object' ? value.stats : this.s.stats) as Snapshot['stats'],
+    }
+    this.cloudRevision = revision
+    this.emit()
+  }
+
+  private cloudAction(action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | 'factory_start' | 'factory_run_stage' | 'factory_complete_stage' | 'warehouse_deposit' | 'market_sell' | 'market_buy_stems' | 'water_tanker' | 'refill_tanker', id: number) {
+    if (!this.cloudHandler) return false
+    if (!this.cloudReady) { this.toast('Cloud save is still connecting. Please wait.', 'warn'); return true }
+    const key = action + ':' + id
+    if (this.cloudPending.has(key)) return true
+    this.cloudPending.add(key)
+    const handler = this.cloudHandler
+    const idempotencyKey = this.cloudKeys.get(key) ?? crypto.randomUUID()
+    this.cloudKeys.set(key, idempotencyKey)
+    void handler(action, id, this.cloudRevision, idempotencyKey).then(result => {
+      if (this.cloudHandler !== handler) return
+      this.hydrateCloudState(result.state, result.revision)
+      this.cloudKeys.delete(key)
+      this.toast('Farming progress saved to your account', 'info')
+    }).catch(error => {
+      this.toast(error instanceof Error ? error.message.replaceAll('_',' ') : 'Cloud action failed. Try again.', 'warn')
+    }).finally(() => this.cloudPending.delete(key))
+    return true
   }
 
   // ---- subscription (useSyncExternalStore) ----
@@ -149,6 +210,7 @@ export class GameStore {
 
   // ---- farming commands ----
   till(id: number, byTractor = false) {
+    if (this.cloudAction('till', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'wild') return false
     this.updatePlot(id, { stage: 'tilled', growth: 0, water: 0, weeds: 0 })
@@ -158,6 +220,7 @@ export class GameStore {
   }
 
   plant(id: number) {
+    if (this.cloudAction('plant', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'tilled') return false
     if (this.s.stems <= 0) {
@@ -171,6 +234,11 @@ export class GameStore {
   }
 
   water(id: number, source: 'can' | 'tanker' | 'rain' = 'can') {
+    if (this.cloudHandler) {
+      if (source === 'tanker') return this.cloudAction('water_tanker', id)
+      if (source === 'rain') { this.toast('Rain watering is visual only while cloud simulation is active.', 'warn'); return false }
+      return this.cloudAction('water', id)
+    }
     const p = this.s.plots[id]
     if (!p || p.stage !== 'planted' || p.water > 0.85) return false
     if (source === 'can') {
@@ -193,6 +261,7 @@ export class GameStore {
   }
 
   weed(id: number) {
+    if (this.cloudAction('weed', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'planted' || p.weeds < 0.25) return false
     this.updatePlot(id, { weeds: 0 })
@@ -201,6 +270,7 @@ export class GameStore {
   }
 
   harvest(id: number) {
+    if (this.cloudAction('harvest', id)) return true
     const p = this.s.plots[id]
     if (!p || p.stage !== 'mature') return false
     const roots = CROP.rootsMin + Math.floor(Math.random() * (CROP.rootsMax - CROP.rootsMin + 1))
@@ -211,6 +281,7 @@ export class GameStore {
   }
 
   refillCan() {
+    if (this.cloudHandler) return this.cloudAction('refill_can', -1)
     if (this.s.waterCan >= ECONOMY.wateringCanUses) return false
     this.commit({ waterCan: ECONOMY.wateringCanUses })
     this.toast('Watering can refilled')
@@ -218,6 +289,7 @@ export class GameStore {
   }
 
   refillTanker() {
+    if (this.cloudHandler) return this.cloudAction('refill_tanker', -1)
     if (this.s.tankerWater >= ECONOMY.tankerCapacity) return false
     this.commit({ tankerWater: ECONOMY.tankerCapacity })
     this.toast('Water tanker refilled at the river pump')
@@ -226,6 +298,7 @@ export class GameStore {
 
   // ---- factory ----
   startBatch() {
+    if (this.cloudHandler) return this.cloudAction('factory_start', -1)
     if (this.s.factory) return false
     if (this.s.roots < ECONOMY.rootsPerBatch) {
       this.toast(`You need ${ECONOMY.rootsPerBatch} cassava roots to start a batch`, 'warn')
@@ -237,14 +310,21 @@ export class GameStore {
   }
 
   runStage() {
+    if (this.cloudHandler) return this.cloudAction('factory_run_stage', -1)
     const f = this.s.factory
     if (!f || f.running) return false
     this.commit({ factory: { ...f, running: true, progress: 0 } })
     return true
   }
 
+  completeFactoryStage() {
+    if (this.cloudHandler) return this.cloudAction('factory_complete_stage', -1)
+    return false
+  }
+
   // ---- warehouse & market ----
   deposit() {
+    if (this.cloudHandler) return this.cloudAction('warehouse_deposit', -1)
     if (this.s.garriCarried <= 0) return false
     this.commit({ garriStored: this.s.garriStored + this.s.garriCarried, garriCarried: 0 })
     this.toast('Garri stored in the warehouse')
@@ -252,6 +332,7 @@ export class GameStore {
   }
 
   sellBag() {
+    if (this.cloudHandler) return this.cloudAction('market_sell', -1)
     if (this.s.garriStored <= 0) {
       this.toast('No garri in the warehouse to sell', 'warn')
       return false
@@ -262,6 +343,7 @@ export class GameStore {
   }
 
   buyStems() {
+    if (this.cloudHandler) return this.cloudAction('market_buy_stems', -1)
     if (this.s.naira < ECONOMY.stemBundlePrice) {
       this.toast('Not enough in-game naira', 'warn')
       return false
@@ -309,7 +391,7 @@ export class GameStore {
     // crops
     let changed = false
     const matured: number[] = []
-    const plots = s.plots.map((p) => {
+    const plots = this.cloudHandler ? s.plots : s.plots.map((p) => {
       if (p.stage !== 'planted') return p
       changed = true
       const water = weather === 'rain' ? Math.min(1, p.water + dt / 6) : Math.max(0, p.water - dt / CROP.waterDrainSeconds)
@@ -328,7 +410,11 @@ export class GameStore {
     let garriCarried = s.garriCarried
     let finishedStage: string | null = null
     let packaged = false
-    if (factory?.running) {
+    if (this.cloudHandler && factory?.running && factory.startedAt) {
+      const stage = FACTORY_STAGES[factory.stageIndex]
+      const progress = Math.min(1, Math.max(0, (Date.now() - Date.parse(factory.startedAt)) / 1000 / stage.seconds))
+      factory = { ...factory, progress }
+    } else if (factory?.running) {
       const stage = FACTORY_STAGES[factory.stageIndex]
       const progress = factory.progress + dt / stage.seconds
       if (progress >= 1) {
@@ -354,8 +440,8 @@ export class GameStore {
       false,
     )
     if (matured.length) this.toast(`Cassava ready to harvest on ${matured.length} plot${matured.length > 1 ? 's' : ''}`)
-    if (packaged) this.gainXp(XP_REWARDS.package, `Packaged ${ECONOMY.bagsPerBatch} bags of garri`)
-    else if (finishedStage) this.gainXp(XP_REWARDS.processStage, `${finishedStage} done`)
+    if (!this.cloudHandler && packaged) this.gainXp(XP_REWARDS.package, `Packaged ${ECONOMY.bagsPerBatch} bags of garri`)
+    else if (!this.cloudHandler && finishedStage) this.gainXp(XP_REWARDS.processStage, `${finishedStage} done`)
 
     this.emitTimer += dt
     if (this.dirty && this.emitTimer > 0.2) {

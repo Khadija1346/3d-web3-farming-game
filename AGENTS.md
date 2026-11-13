@@ -1,30 +1,32 @@
-# AGENTS.md — GARRI: Rise of the Town
+# AGENTS.md — GARRIVERSE
 
-**Continue from [PLAN.md](./PLAN.md).** Milestone 1 (playable village + product surface) is done; Milestone 2
-(Netlify Server + Netlify Database, server-authoritative state) is next.
+Continue from [PLAN.md](./PLAN.md) and [docs/backend-api-contract.md](./docs/backend-api-contract.md).
 
-## Architecture
-- Static Vite + React SPA (no SSR framework) so it can also be wrapped by Capacitor. `netlify.toml` publishes `dist`
-  with an SPA fallback. Backend work should be a **Netlify Server** (`netlify/server/index.mjs`) — no template/
-  framework catch-all exists, so the server will receive `/api/*` traffic.
-- `src/pages/` — `Landing`, `Hub`, `Play` (lazy-loaded; also serves `/embed` with `embed` prop).
-- `src/game/state.ts` — `GameStore`: all game rules as named commands + `tick(dt)` clock. React reads it via
-  `useSyncExternalStore` (published ~5 Hz). The 3D world reads `store.state` live. **When adding a backend, turn each
-  command into an API call; keep the World/HUD reading snapshots.**
-- `src/game/World.ts` — Babylon scene: layout, day/night, rain, movement, vehicles, NPCs, plot visuals, interaction
-  zones. Writes only UI state (prompt, panel, vehicle) back into the store.
-- `src/game/builders.ts` — procedural asset kit (humanoids, tractor, tanker, houses, palms, cassava, signs).
-- `src/fixtures/catalog.ts` — static game-design data (crop rules, economy, factory stages, quest templates,
-  integration status). Contains no player data.
-- `src/config/garri.ts` — official token/social config from `VITE_*` env vars. Never hard-code addresses.
-- `src/embed/bridge.ts` — host event contract for Asta/Capacitor.
+## Current architecture
+- Frontend: static Vite + React + TypeScript SPA; Babylon.js 3D world.
+- Hosting: Netlify static site and Netlify Functions.
+- Identity/data: Supabase Auth + PostgreSQL.
+- `src/pages/Play.tsx` owns game page lifecycle and installs the authenticated cloud action handler.
+- `src/game/state.ts` owns UI/game snapshots. Cloud commands must be server-authoritative; do not trust client balances, rewards, crop growth, factory timing or revisions.
+- `src/game/World.ts` owns scene layout, movement, vehicles, NPCs and interactions.
+- `src/fixtures/catalog.ts` contains public game-design data only, never player data.
+- `src/config/garri.ts` reads official public token/social values from `VITE_*` env vars. Never hard-code an unverified mint address or buy URL.
+- `src/embed/bridge.ts` defines the host event contract.
+- `netlify/functions` contains server endpoints; `_lib/supabase.mts` verifies Supabase bearer tokens and keeps service-role access server-side.
+- `supabase/migrations` are applied in numeric order. CI runs them against an ephemeral PostgreSQL database.
 
-## Conventions & non-negotiables
-- No fake balances, users, NFTs, leaderboard rows, transactions or social verification. Unconnected features show a
-  `StatusPill state="pending"` with an honest note.
-- In-game naira (₦) and XP are play currency; real $GARRI payouts stay disabled until GARRI team approval.
-- Images: AI-generated art in `public/img`, always referenced through `/.netlify/images?url=/img/...` (see `cdn()` in
-  `components/Brand.tsx`).
-- Styling: single `src/styles.css` with CSS variables (soil/laterite/gold palette, Bricolage Grotesque + Instrument Sans).
-- Mobile performance: `World` takes a `mobile` flag (coarse pointer) that lowers resolution, shadow map size,
-  tree and particle counts. Static meshes are frozen and instanced.
+## Non-negotiable security rules
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` or other server secrets in Vite/browser code, logs, screenshots or Git.
+- Never trust client-submitted user IDs, XP, inventory, token balances, crop growth, factory timing or quest completion.
+- Use server-side authorization and idempotency keys for state-changing actions.
+- Do not create fake balances, users, NFTs, leaderboard rows, transactions or social verifications.
+- The in-game naira and XP have no cash value. Real $GARRI transfers, staking, payouts and withdrawals stay disabled until the exact approved contract, tokenomics, eligibility and security model are implemented and audited.
+- Never claim a feature is live merely because its frontend UI or CI build exists. Confirm production health and an end-to-end test.
+- Do not apply production migrations, merge to main or deploy production without explicit user approval and a backup/rollback plan.
+
+## Workflow
+1. Inspect the latest branch state before editing.
+2. Work on `feature/garri-backend-foundation` unless the user directs otherwise.
+3. Add/update SQL integration tests for database behavior.
+4. Run GitHub Actions build, function bundling and SQL migration tests.
+5. Report exactly what CI proves and what still requires real Supabase/Netlify verification.

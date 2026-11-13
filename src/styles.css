@@ -224,3 +224,24 @@ kbd { min-width: 34px; height: 34px; display: grid; place-items: center; border-
 .help-card .muted { font-size: .88rem; }
 .help-card .btn { margin-top: 1rem; }
 .is-embed .hud-top { top: calc(env(safe-area-inset-top) + 8px); }
+
+
+/* farmer account */
+.account-card { max-width: 1120px; margin: -1rem auto 1rem; padding: 2rem clamp(1.25rem, 5vw, 3rem); display: grid; grid-template-columns: minmax(0, .9fr) minmax(280px, 1.1fr); gap: 1.5rem 3rem; align-items: center; background: var(--soil-2); border: 1px solid var(--line); border-radius: 24px; }
+.account-copy h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+.account-copy p:last-child { margin-bottom: 0; }
+.account-form { display: grid; gap: .8rem; }
+.account-form label { display: grid; gap: .35rem; color: var(--muted); font-size: .85rem; }
+.account-form input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: .8rem .9rem; background: rgba(0,0,0,.24); color: var(--cream); font: inherit; outline: none; }
+.account-form input:focus { border-color: var(--gold); }
+.account-tabs { display: flex; gap: .5rem; }
+.account-tabs button { flex: 1; padding: .65rem; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; font: inherit; cursor: pointer; }
+.account-tabs button.active { color: var(--gold); border-color: rgba(240,182,63,.5); background: rgba(240,182,63,.08); }
+.account-signed { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; }
+.account-message { grid-column: 1 / -1; margin: 0; color: var(--gold); font-size: .9rem; }
+.leaderboard-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+.leaderboard-list li { display: grid; grid-template-columns: 3rem minmax(0,1fr) auto; gap: .6rem; align-items: center; padding: .75rem; border-radius: 12px; background: rgba(246,236,214,.04); }
+.leader-rank { color: var(--gold); font-weight: 800; }
+.leader-name { overflow: hidden; text-overflow: ellipsis; }
+.leader-score { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+@media (max-width: 760px) { .account-card { grid-template-columns: 1fr; margin: 0 1rem 1rem; } }

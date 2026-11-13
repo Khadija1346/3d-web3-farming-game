@@ -5,6 +5,7 @@ import { FactoryPanel, MarketPanel, WarehousePanel } from '../components/Panels'
 import { GameStore, xpForLevel } from '../game/state'
 import { GarriWorld, PLOT_COUNT } from '../game/World'
 import { postToHost } from '../embed/bridge'
+import { fetchGameState, getSession, submitEconomyAction, submitFarmingAction, submitUtilityAction, type EconomyAction, type UtilityAction } from '../lib/auth'
 
 const fmtTime = (t: number) => {
   const h = Math.floor(t)
@@ -20,7 +21,51 @@ export default function Play({ embed = false }: { embed?: boolean }) {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [help, setHelp] = useState(true)
+  const [cloudStatus, setCloudStatus] = useState('Local preview · this session is not cloud-saved')
   const touch = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches, [])
+
+  useEffect(() => {
+    const session = getSession()
+    if (!session) {
+      store.setCloudCommandHandler(null)
+      setCloudStatus('Local preview · sign in to use account-backed farming')
+      return
+    }
+    let active = true
+    const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | EconomyAction | UtilityAction, plotId: number, revision: number, idempotencyKey: string) => {
+      try {
+        const farmingActions = ['till', 'plant', 'water', 'weed', 'harvest', 'refill_can']
+        const economyActions = ['factory_start', 'factory_run_stage', 'factory_complete_stage', 'warehouse_deposit', 'market_sell', 'market_buy_stems']
+        const result = farmingActions.includes(action)
+          ? await submitFarmingAction(action as 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can', plotId, revision, idempotencyKey)
+          : economyActions.includes(action)
+            ? await submitEconomyAction(action as EconomyAction, revision, idempotencyKey)
+            : await submitUtilityAction(action as UtilityAction, plotId, revision, idempotencyKey)
+        return { state: result.state, revision: result.revision }
+      } catch (error) {
+        if (error instanceof Error && error.message === 'revision_conflict') {
+          const latest = await fetchGameState()
+          if (latest.state?.state && Array.isArray(latest.state.state.plots)) store.hydrateCloudState(latest.state.state, latest.state.revision)
+          store.setCloudReady(true, latest.state?.revision ?? 0)
+          throw new Error('Game state refreshed after another device update. Please retry the action.')
+        }
+        throw error
+      }
+    }
+    store.setCloudCommandHandler(handler, false)
+    setCloudStatus('Connecting your farmer account…')
+    fetchGameState().then(({ state }) => {
+      if (!active) return
+      if (state?.state && Array.isArray(state.state.plots)) store.hydrateCloudState(state.state, state.revision)
+      store.setCloudReady(true, state?.revision ?? 0)
+      setCloudStatus('Cloud save connected · farming, factory, warehouse, market and tanker are server-backed')
+    }).catch(() => {
+      if (!active) return
+      store.setCloudReady(false)
+      setCloudStatus('Cloud save unavailable · account farming actions paused')
+    })
+    return () => { active = false; store.setCloudCommandHandler(null) }
+  }, [store])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -104,8 +149,8 @@ export default function Play({ embed = false }: { embed?: boolean }) {
         <span title="In-game naira (no cash value)">₦{s.naira.toLocaleString()}</span>
       </div>
 
-      <div className="preview-badge" title="Progress is kept only in this tab until accounts launch">
-        Preview session
+      <div className="preview-badge" title="Farming, factory, warehouse, market and tanker actions are server-authoritative for signed-in players">
+        {cloudStatus}
       </div>
 
       <div className="toasts">
@@ -185,7 +230,7 @@ export default function Play({ embed = false }: { embed?: boolean }) {
                 ? 'Left stick to move · drag the screen to look · pinch to zoom · tap the action button to interact.'
                 : 'WASD to move · Shift to run · drag to look · scroll to zoom · E to interact · F to drive the tractor or water tanker.'}
             </p>
-            <p className="fine">This preview keeps progress in this tab only. Saved progress, accounts and rewards arrive next.</p>
+            <p className="fine">{getSession() ? 'Your farming and in-game economy actions are saved to your account.' : 'This preview keeps progress in this tab only. Sign in to save farming and economy progress.'} Real $GARRI rewards are not enabled.</p>
             <button className="btn btn-primary btn-block" onClick={() => setHelp(false)}>
               Start farming
             </button>
