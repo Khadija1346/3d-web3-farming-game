@@ -65,7 +65,7 @@
 ---
 
 ## Launch checklist (not yet completed)
-1. Apply Supabase migrations 0001–0004 to the intended project after backup and approval.
+1. Apply Supabase migrations 0001–0005 to the intended project after backup and approval.
 2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY` and server-only `SUPABASE_SERVICE_ROLE_KEY` in Netlify.
 3. Deploy Netlify Functions and verify `/.netlify/functions/health` reports `ready`.
 4. Run the documented end-to-end tests with a dedicated test account.
