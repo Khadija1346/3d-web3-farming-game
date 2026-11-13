@@ -33,6 +33,9 @@ declare
   v_elapsed numeric;
   v_growth numeric;
   v_water_level numeric;
+  v_active_seconds numeric;
+  v_average_weeds numeric;
+  v_initial_weeds numeric;
   v_weeds numeric;
   v_total_xp bigint;
 begin
@@ -95,9 +98,13 @@ begin
   for v_roots in 0..jsonb_array_length(v_plots)-1 loop
     v_plot := v_plots->v_roots;
     if v_plot->>'stage' = 'planted' and v_elapsed > 0 then
-      v_water_level := greatest(0, coalesce((v_plot->>'water')::numeric,0) - v_elapsed / 55.0);
-      v_weeds := least(1, coalesce((v_plot->>'weeds')::numeric,0) + v_elapsed / 110.0);
-      v_growth := least(1, coalesce((v_plot->>'growth')::numeric,0) + (v_elapsed / 90.0) * case when coalesce((v_plot->>'water')::numeric,0) > 0 then 1 - v_weeds * 0.7 else 0 end);
+      v_water_level := coalesce((v_plot->>'water')::numeric,0);
+      v_initial_weeds := coalesce((v_plot->>'weeds')::numeric,0);
+      v_active_seconds := least(v_elapsed, v_water_level * 55.0);
+      v_average_weeds := least(1, v_initial_weeds + (v_active_seconds / 110.0) / 2.0);
+      v_weeds := least(1, v_initial_weeds + v_elapsed / 110.0);
+      v_growth := least(1, coalesce((v_plot->>'growth')::numeric,0) + (v_active_seconds / 90.0) * (1 - v_average_weeds * 0.7));
+      v_water_level := greatest(0, v_water_level - v_elapsed / 55.0);
       if v_growth >= 1 then
         v_plot := jsonb_set(v_plot,'{stage}','"mature"');
       end if;
