@@ -11,7 +11,7 @@ Never commit credentials or paste them into chat. Rotate any credential previous
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| GET | `/.netlify/functions/health` | Reports whether required environment variables exist; it does not prove database reachability |
+| GET | `/.netlify/functions/health` | Checks Supabase Auth, database tables, leaderboard view and authoritative RPC availability |
 | POST | `/.netlify/functions/auth-register` | Supabase email registration |
 | POST | `/.netlify/functions/auth-login` | Email/password sign-in |
 | GET | `/.netlify/functions/auth-me` | Verify bearer access token |
