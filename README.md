@@ -27,7 +27,7 @@ npm run dev
 ```
 
 ## Backend setup
-Read [docs/supabase-setup.md](./docs/supabase-setup.md) and [docs/backend-api-contract.md](./docs/backend-api-contract.md). Apply migrations 0001–0004 in order and configure the server-only Netlify environment variables. Never expose the Supabase service-role key to the browser.
+Read [docs/supabase-setup.md](./docs/supabase-setup.md) and [docs/backend-api-contract.md](./docs/backend-api-contract.md). Apply migrations 0001–0005 in order and configure the server-only Netlify environment variables. Never expose the Supabase service-role key to the browser.
 
 ## Embedding
 Load `/embed` full-screen in an approved WebView or iframe. The game emits `garri:ready` and `garri:level` events through `window.parent.postMessage` and an optional `window.GarriHost.onEvent` hook. See [src/embed/bridge.ts](./src/embed/bridge.ts).
