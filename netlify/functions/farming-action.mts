@@ -33,7 +33,7 @@ export default async (request: Request) => {
       if (message === 'invalid_action' || message === 'invalid_plot' || message === 'invalid_idempotency_key' ||
           message === 'plot_not_wild' || message === 'plot_not_tilled' || message === 'plot_not_planted' ||
           message === 'plot_does_not_need_water' || message === 'watering_can_empty' ||
-          message === 'weeding_not_available' || message === 'crop_not_mature' || message === 'no_stems') {
+          message === 'weeding_not_available' || message === 'crop_not_mature' || message === 'no_stems' || message === 'watering_can_full') {
         return json({ error: message }, 409)
       }
       return json({ error: 'action_failed' }, 502)
