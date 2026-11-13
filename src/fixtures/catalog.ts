@@ -81,12 +81,14 @@ export interface Integration {
 }
 
 export const INTEGRATIONS: Integration[] = [
-  { name: '3D village & farming loop', state: 'preview', note: 'Playable now. Progress lives in this browser tab until accounts launch.' },
-  { name: 'Garri processing factory', state: 'preview', note: 'All 8 stages playable in the preview session.' },
-  { name: 'Accounts (Google, X, email)', state: 'pending', note: 'Needs OAuth client credentials from the GARRI team.' },
-  { name: 'Server-saved progress & leaderboard', state: 'pending', note: 'Scheduled in the roadmap — no placeholder rankings are shown.' },
-  { name: 'Wallet sign-in (Solana)', state: 'pending', note: 'Signed-message login — a typed address will never count.' },
-  { name: 'NFT gallery', state: 'pending', note: 'Requires official collection addresses. No sample NFTs are displayed.' },
-  { name: '$GARRI contract & buy link', state: 'pending', note: 'Shown once the official mint address is configured.' },
-  { name: 'Real $GARRI rewards & withdrawals', state: 'pending', note: 'Disabled until contracts, tokenomics and eligibility are approved.' },
+  { name: '3D village & local farming preview', state: 'preview', note: 'The playable village and local single-player preview are available.' },
+  { name: 'Email/password accounts', state: 'pending', note: 'Status updates automatically after the deployed Supabase Auth health check.' },
+  { name: 'Cloud saves & leaderboard', state: 'pending', note: 'Status updates automatically when the deployed API can reach the migrated database.' },
+  { name: 'Server-backed farming, factory, warehouse, market & tanker', state: 'pending', note: 'Status updates automatically after all authoritative gameplay RPCs are present.' },
+  { name: 'Google / X sign-in', state: 'pending', note: 'Requires approved OAuth client configuration and callback URLs.' },
+  { name: 'Solana wallet sign-in & token balance', state: 'pending', note: 'Requires the approved wallet sign-in flow and official $GARRI mint address.' },
+  { name: 'NFT gallery', state: 'pending', note: 'Requires official collection addresses and a supported Solana asset data source.' },
+  { name: 'Social verification & quests', state: 'pending', note: 'Requires approved X API access and a GARRI Telegram bot with membership-check permissions.' },
+  { name: '$GARRI contract & buy link', state: 'pending', note: 'Requires the team-confirmed official mint address and Pump.fun URL.' },
+  { name: 'Real $GARRI rewards & withdrawals', state: 'pending', note: 'Requires approved tokenomics, payout contract, eligibility rules, security review and operational controls.' },
 ]
