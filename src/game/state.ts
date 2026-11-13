@@ -75,7 +75,7 @@ export class GameStore {
   private dirty = false
   private emitTimer = 0
   private weatherTimer = 70
-  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
+  private cloudHandler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null = null
   private cloudReady = false
   private cloudRevision = 0
   private cloudPending = new Set<string>()
@@ -107,7 +107,7 @@ export class GameStore {
     this.published = this.s
   }
 
-  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
+  setCloudCommandHandler(handler: ((action: 'till' | 'plant' | 'water' | 'weed' | 'harvest', plotId: number, revision: number, idempotencyKey: string) => Promise<{ state: Record<string, unknown>; revision: number }>) | null, ready = false) {
     this.cloudHandler = handler
     this.cloudReady = ready
   }
