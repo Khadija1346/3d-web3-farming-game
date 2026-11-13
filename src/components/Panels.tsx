@@ -56,8 +56,14 @@ export function FactoryPanel({ s, store }: { s: Snapshot; store: GameStore }) {
                 <div className="bar">
                   <i style={{ width: `${Math.round(job.progress * 100)}%` }} />
                 </div>
-                <button className="btn btn-primary btn-block" disabled={job.running} onClick={() => store.runStage()}>
-                  {job.running ? `${st.label}… ${Math.round(job.progress * 100)}%` : st.verb}
+                <button
+                  className="btn btn-primary btn-block"
+                  disabled={job.running && job.progress < 1}
+                  onClick={() => job.running ? store.completeFactoryStage() : store.runStage()}
+                >
+                  {job.running
+                    ? job.progress >= 1 ? 'Complete stage' : `${st.label}… ${Math.round(job.progress * 100)}%`
+                    : st.verb}
                 </button>
               </div>
             )
