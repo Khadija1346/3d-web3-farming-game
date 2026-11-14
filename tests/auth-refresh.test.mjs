@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url'
 
 const bundleDir = process.env.GARRIVERSE_FUNCTION_BUNDLE_DIR
 if (!bundleDir) throw new Error('GARRIVERSE_FUNCTION_BUNDLE_DIR is required')
-const { default: handler } = await import(pathToFileURL(resolve(bundleDir, 'auth-refresh.mjs')).href)
+const { default: handler } = await import(pathToFileURL(resolve(bundleDir, 'auth-refresh.js')).href)
 
 function configure(t, fetchImpl) {
   const previousFetch = globalThis.fetch

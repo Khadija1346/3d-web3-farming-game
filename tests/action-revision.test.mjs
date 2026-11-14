@@ -6,10 +6,10 @@ import { pathToFileURL } from 'node:url'
 const bundleDir = process.env.GARRIVERSE_FUNCTION_BUNDLE_DIR
 if (!bundleDir) throw new Error('GARRIVERSE_FUNCTION_BUNDLE_DIR is required')
 const cases = [
-  ['farming-action.mjs', { action: 'till', plotId: 0, idempotencyKey: 'test-farming-0001' }],
-  ['economy-action.mjs', { action: 'factory_start', idempotencyKey: 'test-economy-0001' }],
-  ['utility-action.mjs', { action: 'refill_tanker', idempotencyKey: 'test-utility-0001' }],
-  ['quest-claim.mjs', { questId: 'daily_planting', periodKey: '2026-11-14', idempotencyKey: 'test-quest-0001' }],
+  ['farming-action.js', { action: 'till', plotId: 0, idempotencyKey: 'test-farming-0001' }],
+  ['economy-action.js', { action: 'factory_start', idempotencyKey: 'test-economy-0001' }],
+  ['utility-action.js', { action: 'refill_tanker', idempotencyKey: 'test-utility-0001' }],
+  ['quest-claim.js', { questId: 'daily_planting', periodKey: '2026-11-14', idempotencyKey: 'test-quest-0001' }],
 ]
 for (const [file, payload] of cases) {
   const { default: handler } = await import(pathToFileURL(resolve(bundleDir, file)).href)
