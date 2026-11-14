@@ -5,7 +5,7 @@ import { FactoryPanel, MarketPanel, WarehousePanel } from '../components/Panels'
 import { GameStore, xpForLevel } from '../game/state'
 import { GarriWorld, PLOT_COUNT } from '../game/World'
 import { postToHost } from '../embed/bridge'
-import { fetchGameState, getSession, submitEconomyAction, submitFarmingAction, submitUtilityAction, type EconomyAction, type UtilityAction } from '../lib/auth'
+import { fetchGameState, getSession, getValidSession, hasStoredSession, submitEconomyAction, submitFarmingAction, submitUtilityAction, type EconomyAction, type UtilityAction } from '../lib/auth'
 
 const fmtTime = (t: number) => {
   const h = Math.floor(t)
@@ -25,13 +25,10 @@ export default function Play({ embed = false }: { embed?: boolean }) {
   const touch = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches, [])
 
   useEffect(() => {
-    const session = getSession()
-    if (!session) {
-      store.setCloudCommandHandler(null)
-      setCloudStatus('Local preview · sign in to use account-backed farming')
-      return
-    }
     let active = true
+    store.setCloudCommandHandler(null)
+    setCloudStatus('Checking your farmer account…')
+
     const handler = async (action: 'till' | 'plant' | 'water' | 'weed' | 'harvest' | 'refill_can' | EconomyAction | UtilityAction, plotId: number, revision: number, idempotencyKey: string) => {
       try {
         const farmingActions = ['till', 'plant', 'water', 'weed', 'harvest', 'refill_can']
@@ -45,25 +42,50 @@ export default function Play({ embed = false }: { embed?: boolean }) {
       } catch (error) {
         if (error instanceof Error && error.message === 'revision_conflict') {
           const latest = await fetchGameState()
-          if (latest.state?.state && Array.isArray(latest.state.state.plots)) store.hydrateCloudState(latest.state.state, latest.state.revision)
-          store.setCloudReady(true, latest.state?.revision ?? 0)
+          if (!latest.state?.state || !Array.isArray(latest.state.state.plots)) {
+            store.setCloudReady(false)
+            throw new Error('cloud_game_state_missing')
+          }
+          store.hydrateCloudState(latest.state.state, latest.state.revision)
+          store.setCloudReady(true, latest.state.revision)
           throw new Error('Game state refreshed after another device update. Please retry the action.')
         }
         throw error
       }
     }
-    store.setCloudCommandHandler(handler, false)
-    setCloudStatus('Connecting your farmer account…')
-    fetchGameState().then(({ state }) => {
+
+    void getValidSession().then(session => {
       if (!active) return
-      if (state?.state && Array.isArray(state.state.plots)) store.hydrateCloudState(state.state, state.revision)
-      store.setCloudReady(true, state?.revision ?? 0)
-      setCloudStatus('Cloud save connected · farming, factory, warehouse, market and tanker are server-backed')
+      if (!session) {
+        store.setCloudCommandHandler(null)
+        setCloudStatus('Local preview · sign in to use account-backed farming')
+        return
+      }
+
+      store.setCloudCommandHandler(handler, false)
+      setCloudStatus('Connecting your farmer account…')
+      return fetchGameState().then(({ state }) => {
+        if (!active) return
+        if (!state?.state || !Array.isArray(state.state.plots)) throw new Error('cloud_game_state_missing')
+        store.hydrateCloudState(state.state, state.revision)
+        store.setCloudReady(true, state.revision)
+        setCloudStatus('Cloud save connected · farming, factory, warehouse, market and tanker are server-backed')
+      }).catch(() => {
+        if (!active) return
+        store.setCloudReady(false)
+        setCloudStatus('Cloud save unavailable · account farming actions paused')
+      })
     }).catch(() => {
       if (!active) return
-      store.setCloudReady(false)
-      setCloudStatus('Cloud save unavailable · account farming actions paused')
+      if (hasStoredSession()) {
+        store.setCloudCommandHandler(handler, false)
+        setCloudStatus('Cloud save unavailable · session refresh failed; reload to retry')
+      } else {
+        store.setCloudCommandHandler(null)
+        setCloudStatus('Local preview · sign in to use account-backed farming')
+      }
     })
+
     return () => { active = false; store.setCloudCommandHandler(null) }
   }, [store])
 

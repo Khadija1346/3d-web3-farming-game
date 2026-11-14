@@ -18,9 +18,10 @@
 
 ## Milestone 3 — Accounts
 **Email/password implementation present; deployment verification pending**
-- Supabase email registration, sign-in, session verification and sign-out.
+- Supabase email registration, sign-in, session verification, sign-out and refresh-token rotation through a same-origin Netlify function.
+- Cloud gameplay obtains a refreshed session before loading or submitting authenticated actions; failed refreshes pause cloud writes rather than silently falling back to local progress.
 - Google and X OAuth are not implemented; they require approved OAuth credentials and callback configuration.
-- Current browser session storage is not an httpOnly-cookie session. Harden session storage before treating this as a high-assurance production identity system.
+- Current browser session storage remains localStorage, not an httpOnly-cookie session. Harden session storage before treating this as a high-assurance production identity system.
 
 ## Milestone 4 — Quests and progression
 **Core quest loop implemented; extended progression pending**

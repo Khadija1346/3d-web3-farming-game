@@ -40,6 +40,10 @@ jobs:
       - run: npm run build
       - name: Bundle Netlify Functions
         run: npx --yes esbuild@0.25.0 netlify/functions/*.mts --bundle --platform=node --format=esm --outdir=/tmp/garriverse-functions
+      - name: Test authenticated API input guards
+        env:
+          GARRIVERSE_FUNCTION_BUNDLE_DIR: /tmp/garriverse-functions
+        run: node --test tests/*.test.mjs
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update

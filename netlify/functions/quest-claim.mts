@@ -10,7 +10,7 @@ export default async (request: Request) => {
     const body = await request.json() as { questId?: string; periodKey?: string; idempotencyKey?: string; expectedRevision?: number }
     if (typeof body.questId !== 'string' || typeof body.periodKey !== 'string') return json({ error: 'invalid_quest_claim' }, 400)
     if (typeof body.idempotencyKey !== 'string' || body.idempotencyKey.length < 8 || body.idempotencyKey.length > 128) return json({ error: 'invalid_idempotency_key' }, 400)
-    if (body.expectedRevision !== undefined && (!Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0)) return json({ error: 'invalid_revision' }, 400)
+    if (body.expectedRevision === undefined || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0) return json({ error: 'invalid_revision' }, 400)
     const response = await adminPost('rpc/claim_garriverse_quest', {
       p_user_id: auth.user.id,
       p_quest_id: body.questId,

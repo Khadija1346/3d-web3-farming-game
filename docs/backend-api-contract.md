@@ -14,6 +14,7 @@ Never commit credentials or paste them into chat. Rotate any credential previous
 | GET | `/.netlify/functions/health` | Checks Supabase Auth, database tables, leaderboard view and authoritative RPC availability |
 | POST | `/.netlify/functions/auth-register` | Supabase email registration |
 | POST | `/.netlify/functions/auth-login` | Email/password sign-in |
+| POST | `/.netlify/functions/auth-refresh` | Rotate an expiring Supabase access/refresh token pair |
 | GET | `/.netlify/functions/auth-me` | Verify bearer access token |
 | POST | `/.netlify/functions/auth-logout` | End Supabase session |
 | GET | `/.netlify/functions/game-state` | Read the authenticated player's saved state |
@@ -25,6 +26,8 @@ Never commit credentials or paste them into chat. Rotate any credential previous
 | POST | `/.netlify/functions/utility-action` | Server-authoritative tanker watering and river-pump refills |
 
 Use `Authorization: Bearer <access_token>` for authenticated endpoints. The server derives the player ID from the verified Supabase token; clients cannot submit another player's ID.
+
+The browser refreshes expiring sessions through `POST /.netlify/functions/auth-refresh` with `{ "refreshToken": "..." }`. The Netlify function exchanges it with Supabase Auth using only the public anon key and returns a rotated token pair. The service-role key is not used by this endpoint. The browser still stores the session in localStorage; this is not an httpOnly-cookie session.
 
 Registration JSON: `{ "email": "player@example.com", "password": "minimum-8-characters", "displayName": "Farmer" }`
 
@@ -55,7 +58,7 @@ Migration 0004 owns `water_tanker` and `refill_tanker`; it applies server-time c
 
 Migration 0005 derives daily planting/watering, weekly packaged-bag and all-time till quests from immutable server action events. Claims are transactionally validated, period-bound, idempotent and award only in-game XP/stems.
 
-The farming, economy and utility action endpoints accept only an action, idempotency key and expected revision (the endpoints additionally accept a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is granted to `service_role` only.
+The farming, economy, utility and quest-claim endpoints require an action/claim payload, an idempotency key and a non-negative expected revision (the farming/utility endpoints additionally accept a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is granted to `service_role` only.
 
 The 3D client now loads the signed-in player's cloud state and routes field, factory, warehouse, market and tanker actions to the server. Factory stage progress shown in the UI is a display estimate; the server checks elapsed time before accepting stage completion. Unsigned-in gameplay remains a local preview. Weather/day presentation remains client-side; rain does not water cloud crops. Wallet features, NFT features, social verification and real token rewards are not cloud-backed. Daily/weekly/all-time game quests are server-backed through migration 0005.
 

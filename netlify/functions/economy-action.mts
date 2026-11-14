@@ -21,7 +21,7 @@ export default async (request: Request) => {
     if (typeof body.idempotencyKey !== 'string' || body.idempotencyKey.length < 8 || body.idempotencyKey.length > 128) {
       return json({ error: 'invalid_idempotency_key' }, 400)
     }
-    if (body.expectedRevision !== undefined && (!Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0)) {
+    if (body.expectedRevision === undefined || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0) {
       return json({ error: 'invalid_revision' }, 400)
     }
     const r = await adminPost('rpc/apply_garriverse_economy_action', {
