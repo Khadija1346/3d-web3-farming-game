@@ -6,8 +6,8 @@ The Supabase project stores verified player accounts, cloud game state, action h
 
 1. Open https://supabase.com/dashboard.
 2. Select the approved GARRIVERSE project.
-3. In **Project Settings → API**, locate the Project URL, anon/public key and service-role key.
-4. Keep the service-role key private in a password manager. Never paste it into chat, screenshots or GitHub.
+3. In **Project Settings → API Keys**, locate the Project URL, publishable key and secret key.
+4. Keep the secret key private in a password manager. Never paste it into chat, screenshots or GitHub.
 
 ## 2. Apply migrations in order
 
@@ -19,19 +19,21 @@ Open **SQL Editor** and run the complete contents of these files in numeric orde
 4. `supabase/migrations/0004_authoritative_tanker_actions.sql`
 5. `supabase/migrations/0005_server_quests_and_claims.sql`
 
-Confirm that `player_profiles`, `player_game_states`, `game_action_events` and `player_leaderboard` exist. The RPC functions must be executable by `service_role` only. Browser clients must not receive direct write policies for player state or action events.
+Confirm that `player_profiles`, `player_game_states`, `game_action_events` and `player_leaderboard` exist. The RPC functions must be executable by the server's elevated Supabase role only. Browser clients must not receive direct write policies for player state or action events.
 
 ## 3. Configure Netlify environment variables
 
 In the correct Netlify site, open **Site configuration → Environment variables** and add:
 
 - `SUPABASE_URL` — Supabase project URL.
-- `SUPABASE_ANON_KEY` — Supabase anon/public key.
-- `SUPABASE_SERVICE_ROLE_KEY` — server-only service-role key.
+- `SUPABASE_ANON_KEY` — publishable key (`sb_publishable_...`) for the client-facing Auth/Data API requests.
+- `SUPABASE_SECRET_KEY` — secret key (`sb_secret_...`), server-side only.
 
-Do not add a `VITE_` prefix to any of these values. The service-role key bypasses RLS and must never enter the browser bundle.
+For backward compatibility, the backend also accepts `SUPABASE_SERVICE_ROLE_KEY`. If that variable contains a modern `sb_secret_...` key, the code sends it only in the `apikey` header. If it contains a legacy JWT `service_role` key, the code sends it in both `apikey` and `Authorization: Bearer`.
 
-After setting variables, trigger a new deploy so Netlify Functions receive them.
+Do not add a `VITE_` or `NEXT_PUBLIC_` prefix to server secrets. Secret keys bypass RLS and must never enter the browser bundle or source control. Never paste a secret key into chat.
+
+After setting variables, trigger a new Netlify deploy so Functions receive them.
 
 ## 4. Verify the deployed backend
 
