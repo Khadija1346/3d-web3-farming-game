@@ -2,8 +2,10 @@
 
 Netlify server-side environment variables:
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server only; never expose with a VITE_ prefix)
+- `SUPABASE_ANON_KEY` (publishable `sb_publishable_...` key)
+- `SUPABASE_SECRET_KEY` (secret `sb_secret_...` key; server only)
+
+For backward compatibility, `SUPABASE_SERVICE_ROLE_KEY` is also accepted. Modern `sb_secret_...` keys are sent in the `apikey` header only; legacy JWT service_role keys are sent in both `apikey` and `Authorization: Bearer`.
 
 Never commit credentials or paste them into chat. Rotate any credential previously shared in a chat.
 
@@ -55,7 +57,7 @@ Migration 0004 owns `water_tanker` and `refill_tanker`; it applies server-time c
 
 Migration 0005 derives daily planting/watering, weekly packaged-bag and all-time till quests from immutable server action events. Claims are transactionally validated, period-bound, idempotent and award only in-game XP/stems.
 
-The farming, economy and utility action endpoints accept only an action, idempotency key and expected revision (the endpoints additionally accept a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is granted to `service_role` only.
+The farming, economy and utility action endpoints accept only an action, idempotency key and expected revision (the endpoints additionally accept a plot ID where applicable). XP, levels, balances, inventory, crop progression, factory timing, yield and revision are computed by PostgreSQL. Repeated idempotency keys return the original result; stale revisions return HTTP 409. RPC execution is restricted to the server's elevated Supabase role.
 
 The 3D client now loads the signed-in player's cloud state and routes field, factory, warehouse, market and tanker actions to the server. Factory stage progress shown in the UI is a display estimate; the server checks elapsed time before accepting stage completion. Unsigned-in gameplay remains a local preview. Weather/day presentation remains client-side; rain does not water cloud crops. Wallet features, NFT features, social verification and real token rewards are not cloud-backed. Daily/weekly/all-time game quests are server-backed through migration 0005.
 
@@ -67,4 +69,4 @@ The naira balance and bag prices are fictional in-game values with no cash value
 
 GitHub Actions validates the frontend build, bundles Netlify Functions, applies migrations 0001–0005 to an ephemeral PostgreSQL test database, and exercises the authoritative farming, economy and tanker RPCs including idempotency, revision conflicts, inventory and XP updates.
 
-CI tests do not apply migrations to the user's Supabase project and do not verify Netlify environment variables. Before enabling the deployed game, apply migrations 0001–0005 to the intended Supabase project, configure the three server-side Netlify variables, deploy the Netlify functions, and run an end-to-end test with a test account. Never apply migrations to production without explicit approval and a backup/rollback plan.
+CI tests do not apply migrations to the user's Supabase project and do not verify Netlify environment variables. The Netlify site must have the correct Supabase URL, publishable key and server-only secret key configured, then deploy the Functions and run an end-to-end test with a test account. Never apply migrations to production without explicit approval and a backup/rollback plan.
