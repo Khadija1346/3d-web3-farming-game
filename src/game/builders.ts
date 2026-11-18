@@ -60,43 +60,98 @@ export interface Humanoid {
 }
 
 export function createHumanoid(scene: Scene, mats: Mats, name: string, look: Look): Humanoid {
+  // A higher-detail procedural fallback while production-ready rigged GLB characters
+  // are being prepared. Rounded anatomy replaces the old box-limb mannequin.
   const root = new TransformNode(name, scene)
   const meshes: Mesh[] = []
-  const add = (m: Mesh, parent: TransformNode, color: string) => {
+  const add = (m: Mesh, parent: TransformNode, color: string, spec = 0.08) => {
     m.parent = parent
-    m.material = mats.get(color)
+    m.material = mats.get(color, { spec })
     meshes.push(m)
     return m
   }
-  add(box(scene, `${name}-torso`, 0.52, 0.62, 0.3), root, look.top).position.y = 1.27
-  add(box(scene, `${name}-hips`, 0.5, 0.24, 0.31), root, look.bottom).position.y = 0.9
-  const head = add(MeshBuilder.CreateSphere(`${name}-head`, { diameter: 0.34, segments: 10 }, scene), root, look.skin)
-  head.position.y = 1.78
-  if (look.wrap) {
-    const wrap = add(MeshBuilder.CreateCylinder(`${name}-wrap`, { diameterTop: 0.46, diameterBottom: 0.34, height: 0.22, tessellation: 10 }, scene), root, look.wrap)
-    wrap.position.y = 1.93
-  } else {
-    const hair = add(MeshBuilder.CreateSphere(`${name}-hair`, { diameter: 0.36, segments: 8 }, scene), root, look.hair)
-    hair.scaling.y = 0.55
-    hair.position.y = 1.88
+  const ellipsoid = (
+    partName: string,
+    parent: TransformNode,
+    color: string,
+    position: [number, number, number],
+    scale: [number, number, number],
+    spec = 0.08,
+  ) => {
+    const m = add(MeshBuilder.CreateSphere(`${name}-${partName}`, { diameter: 1, segments: 20 }, scene), parent, color, spec)
+    m.position.set(...position)
+    m.scaling.set(...scale)
+    return m
   }
+  const cylinder = (
+    partName: string,
+    parent: TransformNode,
+    color: string,
+    position: [number, number, number],
+    diameter: number,
+    height: number,
+    spec = 0.08,
+  ) => {
+    const m = add(MeshBuilder.CreateCylinder(`${name}-${partName}`, { diameter, height, tessellation: 20 }, scene), parent, color, spec)
+    m.position.set(...position)
+    return m
+  }
+
+  // Keep the torso first: animateHumanoid uses meshes[0] for the walk-cycle body bob.
+  // Natural body proportions: shoulders, chest, waist and pelvis have separate forms.
+  ellipsoid('shirt-body', root, look.top, [0, 1.27, 0], [0.57, 0.76, 0.34])
+  cylinder('neck', root, look.skin, [0, 1.61, 0], 0.19, 0.22, 0.16)
+  ellipsoid('shirt-shoulders', root, look.top, [0, 1.52, 0], [0.72, 0.27, 0.36])
+  ellipsoid('waist', root, look.bottom, [0, 0.88, 0], [0.48, 0.25, 0.31])
+  // A subtle collar gives the upper body a tailored rather than toy-like silhouette.
+  const collar = cylinder('collar', root, look.top, [0, 1.61, 0], 0.25, 0.07)
+  collar.scaling.z = 0.78
+
+  // Head, ears and readable facial features. All are smooth, with higher tessellation.
+  ellipsoid('head', root, look.skin, [0, 1.83, 0.015], [0.31, 0.40, 0.29], 0.18)
+  ellipsoid('ear-l', root, look.skin, [-0.305, 1.84, 0], [0.085, 0.13, 0.09], 0.16)
+  ellipsoid('ear-r', root, look.skin, [0.305, 1.84, 0], [0.085, 0.13, 0.09], 0.16)
+  ellipsoid('nose', root, look.skin, [0, 1.79, 0.286], [0.075, 0.12, 0.085], 0.2)
   for (const side of [-1, 1]) {
-    const eye = add(MeshBuilder.CreateSphere(`${name}-eye`, { diameter: 0.05, segments: 4 }, scene), root, '#140c08')
-    eye.position.set(side * 0.07, 1.8, 0.155)
+    ellipsoid('eye-white', root, '#f3eee5', [side * 0.105, 1.88, 0.255], [0.073, 0.047, 0.026], 0.1)
+    ellipsoid('eye-iris', root, '#38241a', [side * 0.105, 1.88, 0.279], [0.027, 0.032, 0.012], 0.16)
+    ellipsoid('eye-highlight', root, '#ffffff', [side * 0.112, 1.895, 0.289], [0.009, 0.009, 0.006], 0.1)
+    ellipsoid('brow', root, look.hair, [side * 0.105, 1.96, 0.258], [0.085, 0.018, 0.025], 0.02)
   }
-  const limb = (x: number, y: number, w: number, h: number, color: string, endColor: string) => {
-    const pivot = new TransformNode(`${name}-pivot`, scene)
+  ellipsoid('mouth', root, '#5a2823', [0, 1.685, 0.276], [0.075, 0.014, 0.018], 0.04)
+
+  if (look.wrap) {
+    const wrap = add(MeshBuilder.CreateCylinder(`${name}-headwrap`, { diameterTop: 0.29, diameterBottom: 0.36, height: 0.22, tessellation: 24 }, scene), root, look.wrap, 0.08)
+    wrap.position.y = 2.055
+    ellipsoid('wrap-fold', root, look.wrap, [0, 2.13, -0.035], [0.22, 0.09, 0.22], 0.08)
+  } else {
+    ellipsoid('hair-cap', root, look.hair, [0, 2.015, -0.005], [0.32, 0.16, 0.30], 0.02)
+    ellipsoid('hair-back', root, look.hair, [0, 1.91, -0.17], [0.29, 0.23, 0.17], 0.02)
+  }
+
+  const limb = (side: number, kind: 'arm' | 'leg', pivotY: number, clothing: string) => {
+    const pivot = new TransformNode(`${name}-${kind}-pivot`, scene)
     pivot.parent = root
-    pivot.position.set(x, y, 0)
-    add(box(scene, `${name}-limb`, w, h, w), pivot, color).position.y = -h / 2
-    const end = add(box(scene, `${name}-end`, w * 1.05, 0.14, w * 1.4), pivot, endColor)
-    end.position.set(0, -h - 0.04, w * 0.2)
+    pivot.position.set(side * (kind === 'arm' ? 0.34 : 0.14), pivotY, 0)
+    if (kind === 'arm') {
+      ellipsoid('upper-arm', pivot, clothing, [0, -0.20, 0], [0.19, 0.34, 0.20])
+      ellipsoid('elbow', pivot, look.skin, [0, -0.40, 0], [0.13, 0.13, 0.13], 0.16)
+      ellipsoid('forearm', pivot, look.skin, [0, -0.53, 0.015], [0.12, 0.25, 0.13], 0.16)
+      ellipsoid('hand', pivot, look.skin, [0, -0.70, 0.045], [0.13, 0.14, 0.10], 0.16)
+    } else {
+      ellipsoid('thigh', pivot, clothing, [0, -0.19, 0], [0.22, 0.36, 0.23])
+      ellipsoid('knee', pivot, look.skin, [0, -0.39, 0.015], [0.14, 0.14, 0.15], 0.14)
+      ellipsoid('shin', pivot, clothing, [0, -0.56, 0], [0.15, 0.29, 0.17])
+      ellipsoid('boot', pivot, '#30251e', [0, -0.77, 0.075], [0.19, 0.11, 0.29], 0.04)
+    }
     return pivot
   }
-  const lArm = limb(-0.34, 1.55, 0.13, 0.6, look.top, look.skin)
-  const rArm = limb(0.34, 1.55, 0.13, 0.6, look.top, look.skin)
-  const lLeg = limb(-0.13, 0.84, 0.17, 0.72, look.bottom, '#2a1a10')
-  const rLeg = limb(0.13, 0.84, 0.17, 0.72, look.bottom, '#2a1a10')
+
+  const lArm = limb(-1, 'arm', 1.53, look.top)
+  const rArm = limb(1, 'arm', 1.53, look.top)
+  const lLeg = limb(-1, 'leg', 0.80, look.bottom)
+  const rLeg = limb(1, 'leg', 0.80, look.bottom)
+
   return { root, lArm, rArm, lLeg, rLeg, meshes, phase: Math.random() * 6 }
 }
 
