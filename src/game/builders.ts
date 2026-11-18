@@ -97,9 +97,10 @@ export function createHumanoid(scene: Scene, mats: Mats, name: string, look: Loo
     return m
   }
 
+  // Keep the torso first: animateHumanoid uses meshes[0] for the walk-cycle body bob.
   // Natural body proportions: shoulders, chest, waist and pelvis have separate forms.
-  cylinder('neck', root, look.skin, [0, 1.61, 0], 0.19, 0.22, 0.16)
   ellipsoid('shirt-body', root, look.top, [0, 1.27, 0], [0.57, 0.76, 0.34])
+  cylinder('neck', root, look.skin, [0, 1.61, 0], 0.19, 0.22, 0.16)
   ellipsoid('shirt-shoulders', root, look.top, [0, 1.52, 0], [0.72, 0.27, 0.36])
   ellipsoid('waist', root, look.bottom, [0, 0.88, 0], [0.48, 0.25, 0.31])
   // A subtle collar gives the upper body a tailored rather than toy-like silhouette.
