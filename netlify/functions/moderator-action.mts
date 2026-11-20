@@ -1,4 +1,4 @@
-import { adminAuthUpdate, adminPatch, adminPost, json, methodNotAllowed } from './_lib/supabase.mts'
+import { adminAuthUpdate, adminUpsert, adminPatch, adminPost, json, methodNotAllowed } from './_lib/supabase.mts'
 import { hasRole, requireStaff } from './_lib/moderation.mts'
 
 type ActionBody = {
@@ -46,8 +46,8 @@ export default async (request: Request) => {
         ban_duration: until ? hours + 'h' : 'none',
       })
       if (!authUpdate.ok) return json({ error: 'auth_suspension_failed' }, 502)
-      const stateUpdate = await adminPatch('player_moderation_state?user_id=eq.' + encodeURIComponent(body.targetUserId), {
-        suspended_until: until, reason: until ? reason : null, updated_by: staff.user.id,
+      const stateUpdate = await adminUpsert('player_moderation_state?on_conflict=user_id', {
+        user_id: body.targetUserId, suspended_until: until, reason: until ? reason : null, updated_by: staff.user.id,
       })
       if (!stateUpdate.ok) return json({ error: 'moderation_state_write_failed' }, 502)
       const audit = await adminPost('moderation_actions', {
