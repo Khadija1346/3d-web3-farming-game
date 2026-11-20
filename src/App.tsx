@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Hub from './pages/Hub'
+import ModeratorOffice from './pages/ModeratorOffice'
 
 // Babylon.js is heavy — only load it when someone actually enters the village.
 const Play = lazy(() => import('./pages/Play'))
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/play" element={<Play />} />
         <Route path="/embed" element={<Play embed />} />
         <Route path="/hub" element={<Hub />} />
+        <Route path="/moderator" element={<ModeratorOffice />} />
         <Route path="*" element={<Landing />} />
       </Routes>
     </Suspense>
