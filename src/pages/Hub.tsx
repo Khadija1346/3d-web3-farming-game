@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteFooter, SiteHeader, StatusPill } from '../components/Brand'
 import { GARRI_SOCIAL, GARRI_TOKEN, isTokenConfigured } from '../config/garri'
 import { QUEST_TEMPLATES } from '../fixtures/catalog'
-import { claimQuest, fetchLeaderboard, fetchQuests, getSession, type QuestProgress } from '../lib/auth'
+import { claimQuest, fetchLeaderboard, fetchQuests, getSession, submitPlayerReport, type QuestProgress } from '../lib/auth'
 
 function CopyAddress({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
@@ -17,8 +17,23 @@ export default function Hub() {
   const [questStatus, setQuestStatus] = useState<'loading' | 'ready' | 'signed_out' | 'error'>(getSession() ? 'loading' : 'signed_out')
   const [claimingQuest, setClaimingQuest] = useState<string | null>(null)
   const [questMessage, setQuestMessage] = useState('')
+  const [reportCategory, setReportCategory] = useState<'abuse' | 'cheating' | 'impersonation' | 'scam' | 'other'>('other')
+  const [reportTarget, setReportTarget] = useState('')
+  const [reportDetails, setReportDetails] = useState('')
+  const [reportMessage, setReportMessage] = useState('')
+  const [reportBusy, setReportBusy] = useState(false)
   useEffect(() => { let active = true; fetchLeaderboard().then(data => { if (!active) return; setPlayers(data.players || []); setLeaderboardStatus(data.players?.length ? 'ready' : 'empty') }).catch(() => { if (active) setLeaderboardStatus('error') }); return () => { active = false } }, [])
   useEffect(() => { if (!getSession()) { setQuestStatus('signed_out'); return }; let active = true; fetchQuests().then(data => { if (active) { setQuestState(data); setQuestStatus('ready') } }).catch(() => { if (active) setQuestStatus('error') }); return () => { active = false } }, [])
+  async function handlePlayerReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!getSession()) { setReportMessage('Sign in before submitting a report.'); return }
+    setReportBusy(true); setReportMessage('')
+    try {
+      await submitPlayerReport({ category: reportCategory, details: reportDetails, ...(reportTarget.trim() ? { targetUserId: reportTarget.trim() } : {}) })
+      setReportDetails(''); setReportTarget(''); setReportMessage('Your report has been sent to the moderation team.')
+    } catch (error) { setReportMessage(error instanceof Error ? error.message.replaceAll('_', ' ') : 'Report could not be submitted.') }
+    finally { setReportBusy(false) }
+  }
   async function handleQuestClaim(quest: QuestProgress) {
     if (!questState || claimingQuest) return
     setClaimingQuest(quest.id); setQuestMessage('')
@@ -61,6 +76,17 @@ export default function Hub() {
         </section>
         <section className="card"><div className="card-top"><h2>NFT gallery</h2><StatusPill state="pending" /></div><div className="nft-kinds">{['Characters', 'Land', 'Vehicles', 'Equipment', 'Achievements'].map(k => <span key={k}>{k}</span>)}</div><div className="empty"><p>Your NFTs will show here.</p><small>Ownership is read from the chain for your signed-in wallet. No sample or placeholder NFTs are shown.</small></div></section>
       </div>
+      <section className="card report-card">
+        <div className="card-top"><h2>Report a player or issue</h2><StatusPill state="live" /></div>
+        <p className="fine">Reports are reviewed by the GARRIVERSE moderation team. Do not include passwords, private keys or recovery phrases.</p>
+        <form className="report-form" onSubmit={handlePlayerReport}>
+          <label>Report category<select value={reportCategory} onChange={e => setReportCategory(e.target.value as typeof reportCategory)}><option value="other">Other</option><option value="abuse">Abuse or harassment</option><option value="cheating">Cheating</option><option value="impersonation">Impersonation</option><option value="scam">Scam or suspicious activity</option></select></label>
+          <label>Player user ID (optional)<input value={reportTarget} onChange={e => setReportTarget(e.target.value)} placeholder="Paste the player's account ID if known" /></label>
+          <label>What happened?<textarea value={reportDetails} onChange={e => setReportDetails(e.target.value)} minLength={10} maxLength={2000} required rows={4} placeholder="Describe the issue clearly (10–2000 characters)." /></label>
+          <button className="btn btn-primary" type="submit" disabled={reportBusy || reportDetails.trim().length < 10}>{reportBusy ? 'Sending…' : 'Submit report'}</button>
+          {reportMessage && <p className="fine" role="status">{reportMessage}</p>}
+        </form>
+      </section>
       <div className="hub-staff-link"><Link to="/moderator">Moderator Office · Staff access</Link></div>
       <SiteFooter />
     </div>
