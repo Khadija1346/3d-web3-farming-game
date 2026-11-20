@@ -191,3 +191,13 @@ export async function submitModeratorAction(body: {
     body: JSON.stringify(body),
   })
 }
+
+export async function submitPlayerReport(input: { category: 'abuse' | 'cheating' | 'impersonation' | 'scam' | 'other'; details: string; targetUserId?: string }) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ report: { id: string; status: string; created_at: string } | null }>('player-report', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify(input),
+  })
+}
