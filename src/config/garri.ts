@@ -1,17 +1,18 @@
 /**
- * Official GARRI ecosystem configuration.
- *
- * Token values are read from build-time env vars and are intentionally EMPTY by default.
- * Never hard-code a contract/mint address or purchase URL here — the GARRI team must
- * confirm them, then set VITE_GARRI_MINT_ADDRESS / VITE_GARRI_PUMPFUN_URL in Netlify.
+ * Canonical GARRI token and Robinhood Chain configuration.
+ * The token contract is independently visible on Robinhood Chain Blockscout.
  */
 const env = import.meta.env
 
 export const GARRI_TOKEN = {
   symbol: '$GARRI',
-  network: (env.VITE_GARRI_NETWORK as string | undefined) || 'Solana',
-  mintAddress: ((env.VITE_GARRI_MINT_ADDRESS as string | undefined) || '').trim(),
-  pumpFunUrl: ((env.VITE_GARRI_PUMPFUN_URL as string | undefined) || '').trim(),
+  network: 'Robinhood Chain',
+  chainId: 4663,
+  rpcUrl: 'https://rpc.mainnet.chain.robinhood.com',
+  explorerUrl: 'https://robinhoodchain.blockscout.com/token/0xdddf7ab756c35b4d0537825497e6932780710241',
+  contractAddress: '0xdDDF7AB756C35b4d0537825497e6932780710241',
+  // Compatibility alias for older UI components; this is an EVM ERC-20 address, not a Solana mint.
+  mintAddress: '0xdDDF7AB756C35b4d0537825497e6932780710241',
 }
 
 export const GARRI_SOCIAL = {
@@ -20,5 +21,4 @@ export const GARRI_SOCIAL = {
   website: ((env.VITE_GARRI_WEBSITE_URL as string | undefined) || '').trim(),
 }
 
-export const isTokenConfigured = () => GARRI_TOKEN.mintAddress.length > 0
-export const isBuyLinkConfigured = () => /^https:\/\/(www\.)?pump\.fun\//.test(GARRI_TOKEN.pumpFunUrl)
+export const isTokenConfigured = () => /^0x[a-fA-F0-9]{40}$/.test(GARRI_TOKEN.contractAddress)
