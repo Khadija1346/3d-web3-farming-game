@@ -87,9 +87,9 @@ export const INTEGRATIONS: Integration[] = [
   { name: 'Server-backed farming, factory, warehouse, market & tanker', state: 'pending', note: 'Status updates automatically after all authoritative gameplay RPCs are present.' },
   { name: 'Server-verified quests', state: 'pending', note: 'Status updates automatically after the quest ledger and claim RPCs are available.' },
   { name: 'Google / X sign-in', state: 'pending', note: 'Requires approved OAuth client configuration and callback URLs.' },
-  { name: 'Solana wallet sign-in & token balance', state: 'pending', note: 'Requires the approved wallet sign-in flow and official $GARRI mint address.' },
-  { name: 'NFT gallery', state: 'pending', note: 'Requires official collection addresses and a supported Solana asset data source.' },
+  { name: 'Robinhood Chain wallet sign-in & token balance', state: 'pending', note: 'Requires the EVM wallet connection and signed-message authentication flow.' },
+  { name: 'NFT gallery', state: 'pending', note: 'Requires official Robinhood Chain collection addresses and an EVM asset data source.' },
   { name: 'Social verification', state: 'pending', note: 'Requires approved X API access and a GARRI Telegram bot with membership-check permissions.' },
-  { name: '$GARRI contract & buy link', state: 'pending', note: 'Requires the team-confirmed official mint address and Pump.fun URL.' },
+  { name: '$GARRI Robinhood Chain contract', state: 'live', note: 'Official ERC-20 contract is published on Robinhood Chain Blockscout; wallet balance reads are still pending.' },
   { name: 'Real $GARRI rewards & withdrawals', state: 'pending', note: 'Requires approved tokenomics, payout contract, eligibility rules, security review and operational controls.' },
 ]
