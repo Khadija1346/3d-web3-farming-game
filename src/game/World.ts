@@ -422,6 +422,14 @@ export class GarriWorld {
     const weed = MeshBuilder.CreateCylinder('weed', { diameterTop: 0, diameterBottom: 0.35, height: 0.5, tessellation: 4 }, s)
     weed.material = this.mats.get('#5d8f2e')
     weed.position.y = -100
+    const plotSoilMat = createTerrainMaterial(
+      s,
+      'cassava-plot-soil',
+      'farm',
+      1,
+      1,
+      this.mobile ? 256 : 512,
+    )
     const ridgeMat = this.mats.get('#6a432a')
     const markerMat = this.mats.get('#ffd23f', { emissive: '#b8860b' })
 
@@ -431,6 +439,7 @@ export class GarriWorld {
         const cz = -35.5 + r * 7
         const soil = MeshBuilder.CreateBox('soil', { width: PLOT_SIZE, height: 0.2, depth: PLOT_SIZE }, s)
         soil.position.set(cx, 0.1, cz)
+        soil.material = plotSoilMat
         this.fix(soil, false)
         const ridges: Mesh[] = []
         for (let i = 0; i < 4; i++) {
