@@ -144,3 +144,50 @@ export async function claimQuest(questId: string, periodKey: string, expectedRev
     body: JSON.stringify({ questId, periodKey, expectedRevision, idempotencyKey }),
   })
 }
+
+export interface ModeratorReport {
+  id: string
+  reporter_user_id: string
+  target_user_id: string | null
+  category: string
+  details: string
+  status: 'open' | 'in_review' | 'resolved' | 'dismissed'
+  assigned_to: string | null
+  created_at: string
+}
+export interface ModeratorPlayer {
+  user_id: string
+  display_name: string
+  xp: number
+  level: number
+  created_at: string
+  updated_at: string
+}
+export interface ModeratorOfficeData {
+  staff: { userId: string; roles: string[] }
+  summary: { openReports: number; inReview: number; totalPlayers: number; recentActions: number }
+  reports: ModeratorReport[]
+  players: ModeratorPlayer[]
+  actions: Array<{ id: string; actor_user_id: string; target_user_id: string | null; report_id: string | null; action: string; reason: string; created_at: string }>
+  suspensions: Array<{ user_id: string; suspended_until: string | null; reason: string | null; updated_at: string }>
+}
+export async function fetchModeratorOffice() {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<ModeratorOfficeData>('moderator-office', { headers: { Authorization: 'Bearer ' + session.access_token } })
+}
+export async function submitModeratorAction(body: {
+  action: 'review_report' | 'resolve_report' | 'dismiss_report' | 'suspend_player' | 'unsuspend_player'
+  reportId?: string
+  targetUserId?: string
+  reason: string
+  suspensionHours?: number
+}) {
+  const session = getSession()
+  if (!session) throw new Error('sign_in_required')
+  return request<{ ok: boolean; status?: string; suspendedUntil?: string | null }>('moderator-action', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify(body),
+  })
+}
