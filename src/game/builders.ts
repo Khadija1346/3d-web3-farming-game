@@ -17,6 +17,84 @@ import {
 
 export const hex = (h: string) => Color3.FromHexString(h)
 
+/** Procedural, deterministic terrain textures generated locally at scene boot. */
+export function createTerrainMaterial(
+  scene: Scene,
+  name: string,
+  kind: 'grass' | 'laterite' | 'farm',
+  repeatX = 1,
+  repeatY = 1,
+  resolution = 512,
+): StandardMaterial {
+  const palettes = {
+    grass: { base: '#526f3b', dark: '#344d2b', mid: '#69874a', light: '#82975a', dry: '#a18c54' },
+    laterite: { base: '#a85f3d', dark: '#78432f', mid: '#bd7950', light: '#d09563', dry: '#d9ad79' },
+    farm: { base: '#705039', dark: '#493326', mid: '#896044', light: '#a57950', dry: '#b58a5d' },
+  }[kind]
+  const tex = new DynamicTexture(name + '-texture', { width: resolution, height: resolution }, scene, false)
+  const ctx = tex.getContext() as CanvasRenderingContext2D
+  ctx.fillStyle = palettes.base
+  ctx.fillRect(0, 0, resolution, resolution)
+
+  let seed = kind === 'grass' ? 1709 : kind === 'laterite' ? 2713 : 3911
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+
+  for (let i = 0; i < 95; i++) {
+    const x = random() * resolution
+    const y = random() * resolution
+    const radius = resolution * (0.018 + random() * 0.075)
+    ctx.globalAlpha = 0.08 + random() * 0.13
+    ctx.fillStyle = [palettes.dark, palettes.mid, palettes.light, palettes.dry][Math.floor(random() * 4)]
+    ctx.beginPath()
+    ctx.ellipse(x, y, radius * (0.8 + random()), radius * (0.55 + random()), random() * Math.PI, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const count = kind === 'grass' ? 2600 : 1900
+  for (let i = 0; i < count; i++) {
+    const x = random() * resolution
+    const y = random() * resolution
+    const size = kind === 'grass' ? 0.7 + random() * 2.1 : 0.8 + random() * 2.8
+    ctx.globalAlpha = 0.16 + random() * 0.28
+    ctx.fillStyle = [palettes.dark, palettes.mid, palettes.light, palettes.dry][Math.floor(random() * 4)]
+    if (kind === 'grass') {
+      ctx.fillRect(x, y, size * 0.55, size * 1.8)
+    } else {
+      ctx.beginPath()
+      ctx.ellipse(x, y, size * 1.2, size * 0.75, random() * Math.PI, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  if (kind === 'grass') {
+    for (let i = 0; i < 700; i++) {
+      const x = random() * resolution
+      const y = random() * resolution
+      ctx.globalAlpha = 0.18 + random() * 0.2
+      ctx.strokeStyle = random() > 0.5 ? palettes.light : palettes.dark
+      ctx.lineWidth = 0.7 + random() * 1.1
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(x + (random() - 0.5) * 3, y - 2 - random() * 5)
+      ctx.stroke()
+    }
+  }
+
+  ctx.globalAlpha = 1
+  tex.update(false)
+  tex.uScale = repeatX
+  tex.vScale = repeatY
+
+  const mat = new StandardMaterial(name + '-material', scene)
+  mat.diffuseTexture = tex
+  mat.specularColor = new Color3(0.035, 0.035, 0.035)
+  mat.specularPower = 8
+  return mat
+}
+
 export class Mats {
   private cache = new Map<string, StandardMaterial>()
   constructor(private scene: Scene) {}
