@@ -23,10 +23,16 @@ export default async (_request: Request) => {
     }, 503)
   }
 
-  const [authentication, database, leaderboard] = await Promise.all([
+  const [authentication, database, leaderboard, moderation] = await Promise.all([
     authServiceAvailable(),
     adminRequest('player_game_states?select=user_id&limit=0').then(r => r.ok).catch(() => false),
     adminRequest('player_leaderboard?select=user_id&limit=0').then(r => r.ok).catch(() => false),
+    Promise.all([
+      adminRequest('staff_roles?select=user_id&limit=0'),
+      adminRequest('moderation_reports?select=id&limit=0'),
+      adminRequest('moderation_actions?select=id&limit=0'),
+      adminRequest('player_moderation_state?select=user_id&limit=0'),
+    ]).then(results => results.every(r => r.ok)).catch(() => false),
   ])
   const [farmingRpc, economyRpc, utilityRpc, questTable, questReadRpc, questClaimRpc] = await Promise.all([
     rpcExists('rpc/apply_garriverse_action', { p_user_id: null, p_action_type: null, p_plot_id: null, p_idempotency_key: null, p_expected_revision: null }),
@@ -38,7 +44,7 @@ export default async (_request: Request) => {
   ])
   const cloudGameplay = farmingRpc && economyRpc && utilityRpc
   const quests = questTable && questReadRpc && questClaimRpc
-  const ready = authentication && database && leaderboard && cloudGameplay && quests
+  const ready = authentication && database && leaderboard && cloudGameplay && quests && moderation
   return json({
     service: 'garriverse-api',
     status: ready ? 'ready' : 'degraded',
@@ -48,6 +54,7 @@ export default async (_request: Request) => {
       leaderboard: leaderboard ? 'connected' : 'unavailable_or_migrations_missing',
       cloudGameplay: cloudGameplay ? 'rpc_functions_present' : 'not_ready',
       quests: quests ? 'rpc_functions_present' : 'not_ready',
+      moderatorOffice: moderation ? 'tables_present' : 'not_ready',
       realTokenRewards: 'disabled',
     },
     timestamp: new Date().toISOString(),

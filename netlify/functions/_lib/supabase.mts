@@ -59,3 +59,31 @@ export async function authServiceAvailable() {
     return r.ok
   } catch { return false }
 }
+
+export async function adminPatch(path: string, body: unknown) {
+  const c = supabaseConfig()
+  if (!c) throw new Error('server_not_configured')
+  return fetch(c.url + '/rest/v1/' + path, {
+    method: 'PATCH',
+    headers: adminApiHeaders(c.adminKey, { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+    body: JSON.stringify(body),
+  })
+}
+export async function adminUpsert(path: string, body: unknown) {
+  const c = supabaseConfig()
+  if (!c) throw new Error('server_not_configured')
+  return fetch(c.url + '/rest/v1/' + path, {
+    method: 'POST',
+    headers: adminApiHeaders(c.adminKey, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation' }),
+    body: JSON.stringify(body),
+  })
+}
+export async function adminAuthUpdate(userId: string, body: unknown) {
+  const c = supabaseConfig()
+  if (!c) throw new Error('server_not_configured')
+  return fetch(c.url + '/auth/v1/admin/users/' + encodeURIComponent(userId), {
+    method: 'PUT',
+    headers: adminApiHeaders(c.adminKey, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body),
+  })
+}
