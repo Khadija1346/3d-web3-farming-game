@@ -28,6 +28,7 @@ import {
   createTractor,
   hex,
   makeDotTexture,
+  createTerrainMaterial,
   makeSign,
   type Humanoid,
   type Look,
@@ -297,14 +298,23 @@ export class GarriWorld {
 
   private buildTerrain() {
     const s = this.scene
+    const textureSize = this.mobile ? 256 : 512
     const ground = MeshBuilder.CreateGround('ground', { width: 320, height: 320 }, s)
-    ground.material = this.mats.get('#6c9a3f')
+    ground.material = createTerrainMaterial(s, 'village-grass', 'grass', 26, 26, textureSize)
     this.fix(ground, false)
 
     const patch = (cx: number, cz: number, w: number, d: number, color: string, y = 0.02) => {
       const p = MeshBuilder.CreateGround('patch', { width: w, height: d }, s)
       p.position.set(cx, y, cz)
-      p.material = this.mats.get(color)
+      const kind = color === '#7c8f3c' ? 'farm' : 'laterite'
+      p.material = createTerrainMaterial(
+        s,
+        'terrain-' + kind + '-' + Math.round(cx) + '-' + Math.round(cz),
+        kind,
+        Math.max(1, w / (kind === 'farm' ? 5 : 4)),
+        Math.max(1, d / (kind === 'farm' ? 5 : 4)),
+        textureSize,
+      )
       this.fix(p, false)
       return p
     }
@@ -999,11 +1009,11 @@ export class GarriWorld {
     const dirAngle = sunUp ? angle : angle + Math.PI
     this.sun.direction = new Vector3(-Math.cos(dirAngle), -Math.max(0.25, Math.abs(Math.sin(dirAngle))), 0.45).normalize()
     this.sun.position = focus.subtract(this.sun.direction.scale(70))
-    this.sun.intensity = (sunUp ? 0.25 + day * 1.55 : 0.22) * (wet ? 0.5 : 1)
+    this.sun.intensity = (sunUp ? 0.22 + day * 1.12 : 0.16) * (wet ? 0.62 : 1)
     this.sun.diffuse = sunUp ? Color3.Lerp(hex('#ffb37a'), hex('#fff4e0'), Math.min(1, elev * 2)) : hex('#8ea6ff')
-    this.hemi.intensity = 0.28 + day * 0.5
+    this.hemi.intensity = 0.22 + day * 0.34
     this.hemi.diffuse = Color3.Lerp(hex('#5a6aa8'), hex('#e8f1ff'), day)
-    this.hemi.groundColor = Color3.Lerp(hex('#1a1a2a'), hex('#6b5a3a'), day)
+    this.hemi.groundColor = Color3.Lerp(hex('#17251b'), hex('#514638'), day)
     this.lampMat.emissiveColor = day < 0.35 ? hex('#ffc864') : hex('#3a2a10')
 
     this.rain.emitRate = wet ? (this.mobile ? 900 : 2200) : 0
