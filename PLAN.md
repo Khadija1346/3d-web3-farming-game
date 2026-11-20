@@ -29,10 +29,12 @@
 - Referral validation, achievements, seasonal competitions and broader anti-cheat cadence rules remain pending.
 
 ## Milestone 5 — Wallet identity and token hub
-**Pending external configuration and implementation**
-- Solana wallet connect, nonce + signed-message authentication, wallet linking.
-- Live $GARRI balance and transaction reads.
-- Requires official mint address and a supported Solana RPC/data provider.
+**Network and contract verified; wallet integration pending**
+- $GARRI is an ERC-20 token on Robinhood Chain (Ethereum-compatible L2), not Solana.
+- Official contract: `0xdDDF7AB756C35b4d0537825497e6932780710241`.
+- Mainnet chain ID `4663`; native gas token ETH; public RPC `https://rpc.mainnet.chain.robinhood.com`.
+- Token contract is linked to Robinhood Chain Blockscout in the token hub.
+- EVM wallet connect, signed-message authentication, live token balances and transaction reads remain pending.
 
 ## Milestone 6 — Social verification
 **Pending external credentials**
@@ -41,8 +43,8 @@
 
 ## Milestone 7 — NFT ecosystem
 **Pending external configuration and implementation**
-- Ownership reads and gallery for approved collections.
-- Requires official collection addresses and a Solana DAS/indexer provider.
+- Ownership reads and gallery for approved Robinhood Chain/EVM collections.
+- Requires official collection addresses and a supported EVM indexer/data provider.
 
 ## Milestone 8 — Reward engine and ledger
 **Disabled by design**
@@ -50,8 +52,13 @@
 - Requires exact approved tokenomics, payout contract, eligibility rules, audited security model, custody/authority controls, monitoring and incident response.
 
 ## Milestone 9 — Moderator Office
-**Pending**
-- Server-side roles, reports, moderation actions and immutable audit logs.
+**Implemented on feature branch; production activation pending**
+- Staff roles (`admin`, `moderator`, `support`) enforced server-side.
+- Authenticated player report submission and a staff-only report queue.
+- Report review, resolution and dismissal actions.
+- Admin-only player suspension/unsuspension with reason and audit trail.
+- Append-only moderation action log; direct browser access to moderation tables is blocked by RLS.
+- Requires migration `0006_moderator_office.sql`, assignment of the first admin role, Netlify deploy and end-to-end verification before production is called live.
 
 ## Milestone 10 — Asta DAO and Capacitor
 **Embed route and host event bridge implemented; packaging/host integration pending**
@@ -65,11 +72,11 @@
 ---
 
 ## Launch checklist (not yet completed)
-1. Apply Supabase migrations 0001–0005 to the intended project after backup and approval.
+1. Apply Supabase migrations 0001–0006 to the intended project after backup and approval.
 2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY` and server-only `SUPABASE_SERVICE_ROLE_KEY` in Netlify.
 3. Deploy Netlify Functions and verify `/.netlify/functions/health` reports `ready`.
 4. Run the documented end-to-end tests with a dedicated test account.
-5. Configure official public GARRI values (mint, buy URL and collection addresses) only after the team supplies the canonical values.
+5. Keep the verified Robinhood Chain $GARRI ERC-20 contract configured; add any official DEX buy URL or NFT collection addresses only after verification.
 6. Keep real token payouts disabled until the approved contract and security controls are in place.
 
 The current branch is a tested implementation branch. A passing CI run is not proof that the production Supabase project or Netlify site has been migrated/deployed.
