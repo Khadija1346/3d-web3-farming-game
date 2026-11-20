@@ -86,6 +86,7 @@ export const INTEGRATIONS: Integration[] = [
   { name: 'Cloud saves & leaderboard', state: 'pending', note: 'Status updates automatically when the deployed API can reach the migrated database.' },
   { name: 'Server-backed farming, factory, warehouse, market & tanker', state: 'pending', note: 'Status updates automatically after all authoritative gameplay RPCs are present.' },
   { name: 'Server-verified quests', state: 'pending', note: 'Status updates automatically after the quest ledger and claim RPCs are available.' },
+  { name: 'Moderator Office', state: 'pending', note: 'Requires migration 0006, an assigned staff role and a verified production deployment.' },
   { name: 'Google / X sign-in', state: 'pending', note: 'Requires approved OAuth client configuration and callback URLs.' },
   { name: 'Robinhood Chain wallet sign-in & token balance', state: 'pending', note: 'Requires the EVM wallet connection and signed-message authentication flow.' },
   { name: 'NFT gallery', state: 'pending', note: 'Requires official Robinhood Chain collection addresses and an EVM asset data source.' },
